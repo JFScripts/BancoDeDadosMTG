@@ -1,7 +1,7 @@
 import sqlite3
 from gerenciadorBD import criarColecao, lerTabela
 from apiManager import inicializarCatalogo, pegarCotacaoDollar
-from menu import adicionarNovaCarta, atualizarCarta, deletarCarta, listarCartas
+from menu import adicionarNovaCarta, atualizarCarta, deletarCarta, listarCartas, gerarGraficoCores
 from aiManager import consultarSinergias
 
 def main():
@@ -9,7 +9,7 @@ def main():
     urlAwesomeapi = "https://economia.awesomeapi.com.br/json/last/USD-BRL"
     colecaoNome = "colecao.db"
     dataBase = "dataBase.json"
-    aiKey = "[chave da api do gemini aqui]"
+    aiKey = ""
     maxDias = 15
 
     criarColecao(colecaoNome)
@@ -24,6 +24,7 @@ def main():
         print("[3] Atualizar Carta")
         print("[4] Remover Carta")
         print("[5] Conferir Sinergias")
+        print("[6] Gerar Grafico de Cores")
         print("[0] Sair")
         
         try:
@@ -48,6 +49,8 @@ def main():
             case 5:
                 print("\n--- ANALISANDO SUA COLEÇÃO COM IA ---")
                 print(consultarSinergias(lerTabela(conexao, "cartas")))
+            case 6:
+                gerarGraficoCores(conexao)
             case _:
                 print("\nOpção Inválida\n")
                 

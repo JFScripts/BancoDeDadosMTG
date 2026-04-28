@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 from gerenciadorBD import adicionarValorTabela, lerTabela, atualizarTabela, deletarItemTabela
 
 def adicionarNovaCarta(conexao, catalogo):
@@ -23,7 +24,11 @@ def adicionarNovaCarta(conexao, catalogo):
             
     idScryfall = catalogo[nomeCarta][vEscolhida]["idScryfall"]
     edicao = catalogo[nomeCarta][vEscolhida]["edicao"]
-    dictNovaCarta = {"nome":nomeCarta, "idScryfall": idScryfall, "qntNormal":qntCarta, "qntFoil":qntFoil, "edicao": edicao}
+    corLista = catalogo[nomeCarta][vEscolhida]["cor"]
+    cor = ""
+    for identidade in corLista:
+        cor += str(identidade)
+    dictNovaCarta = {"nome":nomeCarta, "idScryfall": idScryfall, "qntNormal":qntCarta, "qntFoil":qntFoil, "edicao": edicao, "cor": cor}
     adicionarValorTabela(conexao, "cartas", dictNovaCarta)
 
 def atualizarCarta(conexao, cotacao, catalogo):
@@ -135,3 +140,33 @@ def listarCartas(lista, valorDollar, catalogo):
         
     print("-" * 85)
     print(f"VALOR TOTAL DA COLEÇÃO: R$ {valorTotalColecao:.2f}\n")
+
+def gerarGraficoCores(conexao):
+    cartas = lerTabela(conexao, "cartas")
+    dictCor = {"incolor": 0, "preto": 0, "verde": 0, "vermelho": 0, "azul": 0, "branco": 0, "multicor": 0}
+    for carta in cartas:
+        corAtual = carta["cor"]
+        match corAtual:
+            case "":
+                dictCor["incolor"] += 1
+            case "B":
+                dictCor["preto"] += 1
+            case "G":
+                dictCor["verde"] += 1
+            case "R":
+                dictCor["vermelho"] += 1
+            case "U":
+                dictCor["azul"] += 1
+            case "W":
+                dictCor["branco"] += 1
+            case _:
+                dictCor["multicor"] += 1
+    nomeCores = list(dictCor.keys())
+    valores = list(dictCor.values())
+    coresGrafico = ['#90adbb', '#15110d', '#00733e', '#d3202a', '#0e68ab', '#f0f2c3', '#e5d164']
+
+    plt.figure(figsize=(8, 8))
+    plt.pie(valores, labels=nomeCores, autopct='%1.1f%%', colors=coresGrafico, startangle=140)
+    plt.title("Distribuição de Cores da Coleção")
+    plt.show()
+

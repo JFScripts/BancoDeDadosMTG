@@ -10,7 +10,8 @@ def criarColecao(dataBase):
         nome TEXT,
         edicao TEXT,
         qntNormal INTEGER,
-        qntFoil INTEGER
+        qntFoil INTEGER,
+        cor TEXT
     )""")
     conexao.commit()
     conexao.close()

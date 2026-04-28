@@ -50,7 +50,7 @@ def carregarCatalogo(dataBase, catalogoNome, precisaLimpar):
             cartaNome = carta["name"].lower()
             if cartaNome not in catalogo:
                 catalogo[cartaNome] = []
-            catalogo[cartaNome].append({"edicao":carta["set"], "idScryfall":carta["id"], "preco": carta["prices"]["usd"] or 0.0})
+            catalogo[cartaNome].append({"edicao":carta["set"], "idScryfall":carta["id"], "preco": carta["prices"]["usd"] or 0.0, "cor": carta["color_identity"] or []})
     with open(catalogoNome, "w", encoding="utf-8") as arquivo:
         json.dump(catalogo, arquivo)
     return catalogo
