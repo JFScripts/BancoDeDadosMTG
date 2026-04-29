@@ -1,15 +1,18 @@
 import sqlite3
+import os
 from gerenciadorBD import criarColecao, lerTabela
 from apiManager import inicializarCatalogo, pegarCotacaoDollar
 from menu import adicionarNovaCarta, atualizarCarta, deletarCarta, listarCartas, gerarGraficoCores
 from aiManager import consultarSinergias
+from inicializer import inicializarArquivos
 
 def main():
+    inicializarArquivos()
     urlBulkData = "https://api.scryfall.com/bulk-data/default-cards"
     urlAwesomeapi = "https://economia.awesomeapi.com.br/json/last/USD-BRL"
     colecaoNome = "colecao.db"
-    dataBase = "dataBase.json"
-    aiKey = ""
+    dataBase = os.getenv("DB_NAME")
+    geminiKey = os.getenv("GEMINI_API_KEY")
     maxDias = 15
 
     criarColecao(colecaoNome)
@@ -48,7 +51,7 @@ def main():
                 deletarCarta(conexao, cotacao, catalogo)
             case 5:
                 print("\n--- ANALISANDO SUA COLEÇÃO COM IA ---")
-                print(consultarSinergias(lerTabela(conexao, "cartas")))
+                print(consultarSinergias(lerTabela(conexao, "cartas"), geminiKey))
             case 6:
                 gerarGraficoCores(conexao)
             case _:
