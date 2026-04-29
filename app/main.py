@@ -15,6 +15,7 @@ def main():
     geminiKey = os.getenv("GEMINI_API_KEY")
     maxDias = 15
 
+
     criarColecao(colecaoNome)
     catalogo = inicializarCatalogo(urlBulkData, dataBase, maxDias)
     cotacao = pegarCotacaoDollar(urlAwesomeapi)
@@ -51,7 +52,9 @@ def main():
                 deletarCarta(conexao, cotacao, catalogo)
             case 5:
                 print("\n--- ANALISANDO SUA COLEÇÃO COM IA ---")
-                print(consultarSinergias(lerTabela(conexao, "cartas"), geminiKey))
+                consultarSinergias(lerTabela(conexao, "cartas"), geminiKey)
+                print("\n"+"="*60)
+                input("\nPressione ENTER para voltar ao menu")
             case 6:
                 gerarGraficoCores(conexao)
             case _:
