@@ -1,6 +1,5 @@
 /app/__pycache__
-Catalogo.json
-colecao.db
-dataBase.json
 .env
-arquivoCache.json
+*.json
+*.db
+.venv

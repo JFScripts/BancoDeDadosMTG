@@ -12,8 +12,16 @@ def adicionarNovaCarta(conexao, catalogo):
         print("\nRetornando para o menu")
         return
 
-    qntCarta = int(input("\nDigite a quantidade de cartas normais:\n> "))
-    qntFoil = int(input("\nDigite a quantidade de cartas foils:\n> "))
+    qntCartas = int(input("\nDigite a quantidade de cartas:\n> "))
+    
+    ehFoil = input("A Carta é FOIL? (S/N):\n> ").lower()
+    qntNormal = 0
+    qntFoil = 0
+    if ehFoil == "s":
+        qntFoil = qntCartas
+    else:
+        qntNormal = qntCartas
+
     versoes = catalogo[nomeCarta]
 
     vEscolhida = -1
@@ -26,9 +34,10 @@ def adicionarNovaCarta(conexao, catalogo):
     edicao = catalogo[nomeCarta][vEscolhida]["edicao"]
     corLista = catalogo[nomeCarta][vEscolhida]["cor"]
     cor = ""
+    
     for identidade in corLista:
         cor += str(identidade)
-    dictNovaCarta = {"nome":nomeCarta, "idScryfall": idScryfall, "qntNormal":qntCarta, "qntFoil":qntFoil, "edicao": edicao, "cor": cor}
+    dictNovaCarta = {"nome":nomeCarta, "idScryfall": idScryfall, "qntNormal":qntNormal, "qntFoil":qntFoil, "edicao": edicao, "cor": cor}
     adicionarValorTabela(conexao, "cartas", dictNovaCarta)
 
 def atualizarCarta(conexao, cotacao, catalogo):

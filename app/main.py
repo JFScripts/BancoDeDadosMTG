@@ -1,7 +1,7 @@
 import sqlite3
 import os
 from gerenciadorBD import criarColecao, lerTabela
-from apiManager import inicializarCatalogo, pegarCotacaoDollar
+from apiManager import inicializarCatalogo, pegarCotacaoDollar, baixarEdicoes
 from menu import adicionarNovaCarta, atualizarCarta, deletarCarta, listarCartas, gerarGraficoCores
 from aiManager import consultarSinergias
 from inicializer import inicializarArquivos
@@ -9,8 +9,12 @@ from inicializer import inicializarArquivos
 def main():
     inicializarArquivos()
     urlBulkData = "https://api.scryfall.com/bulk-data/default-cards"
+    urlEdicoes = "https://api.scryfall.com/sets"
     urlAwesomeapi = "https://economia.awesomeapi.com.br/json/last/USD-BRL"
+    edicoes = baixarEdicoes("edicoes.json", urlEdicoes)
+    
     colecaoNome = "colecao.db"
+    
     dataBase = os.getenv("DB_NAME")
     geminiKey = os.getenv("GEMINI_API_KEY")
     maxDias = 15

@@ -12,24 +12,25 @@ def inicializarCatalogo(url, dbNome,maxDias):
         diferencaDias = tempoAtual - ultimaModificacao
 
         if diferencaDias.days >= maxDias:
-            baixarDB(url)
+            baixarDB(url, dbNome)
             precisaLimpar = True
     else: 
-        baixarDB(url)
+        baixarDB(url, dbNome)
         precisaLimpar = True
     
     return carregarCatalogo(dbNome, "Catalogo.json", precisaLimpar)
         
 
-def baixarDB(url):
+def baixarDB(url, dbNome):
     request = requests.get(url)
     dados = request.json()
     linkDownload = dados["download_uri"]
     tamanhoTotal = int(dados["size"])
-    download = requests.get(linkDownload, stream = True)
+    header = {"user-Agent": "colecaoMTG"}
+    download = requests.get(linkDownload, headers=header,stream = True)
     tamanhoAtual = 0
 
-    with open("dataBase.json", "wb") as arquivo:
+    with open(dbNome, "wb") as arquivo:
         for parte in download.iter_content(chunk_size=8192):
             arquivo.write(parte)
             tamanhoAtual += len(parte)
@@ -41,19 +42,70 @@ def baixarDB(url):
 def carregarCatalogo(dataBase, catalogoNome, precisaLimpar):
     catalogo = {}
     if not precisaLimpar and os.path.exists(catalogoNome):
-        with open(catalogoNome, "r", encoding="utf-8") as arquivo:
-            catalogo = json.load(arquivo)
-        return catalogo
-    with open(dataBase, "r", encoding="utf-8") as arquivo:
-        dadosBrutos = json.load(arquivo)
-        for carta in dadosBrutos:
-            cartaNome = carta["name"].lower()
-            if cartaNome not in catalogo:
-                catalogo[cartaNome] = []
-            catalogo[cartaNome].append({"edicao":carta["set"], "idScryfall":carta["id"], "preco": carta["prices"]["usd"] or 0.0, "cor": carta["color_identity"] or []})
+        try:
+            with open(catalogoNome, "r", encoding="utf-8") as arquivo:
+                catalogo = json.load(arquivo)
+            return catalogo
+        except json.JSONDecodeError:
+            print(f"\nAviso: O arquivo {catalogoNome} está corrompido/vazio.Recriando")
+            precisaLimpar = True
+    try:
+        with open(dataBase, "r", encoding="utf-8", errors="ignore") as arquivo:
+            dadosBrutos = json.load(arquivo)
+    except json.JSONDecodeError:
+        print(f"\nERRO CRITICO: O arquivo {catalogoNome} está corrompido/vazio. Apague o arquivo e tente novamente\n")
+        input("Pressione ENTER para continuar")
+        return {}
+
+    for carta in dadosBrutos:
+        if carta["digital"]:
+            continue
+        cartaNome = carta["name"].lower()
+
+        if cartaNome not in catalogo:
+            catalogo[cartaNome] = []
+        edicao = carta["set"]
+        idScryfall = carta["id"]
+        cor = carta["color_identity"]
+        precoNormal = carta["prices"]["usd"]
+        precoFoil = carta["prices"]["usd_foil"]
+        precoEtched = carta["prices"]["usd_etched"]
+        acabamentos = carta["finishes"]
+
+        catalogo[cartaNome].append({"edicao": edicao, 
+        "idScryfall": idScryfall, 
+        "precoNormal": precoNormal or 0.0, 
+        "precoFoil": precoFoil or 0.0, 
+        "precoEtched": precoEtched or 0.0, 
+        "cor": cor or [], 
+        "acabamento": acabamentos})
+
     with open(catalogoNome, "w", encoding="utf-8") as arquivo:
-        json.dump(catalogo, arquivo)
+        json.dump(catalogo, arquivo, ensure_ascii=False, indent=4)
     return catalogo
+
+def baixarEdicoes(setJson, url):
+    if not os.path.exists(setJson):
+        request = requests.get(url)
+        edicaoBruta = request.json()["data"]
+        dictEdicao = {}
+
+        for edicao in edicaoBruta:
+            if not edicao["digital"] and edicao["set_type"] != "token":
+                idScryfall = edicao["id"]
+                codigo = edicao["code"]
+                nome = edicao["name"]
+                qntCartas = edicao["card_count"]
+                dictEdicao[codigo] = []
+                dictEdicao[codigo].append({"id":idScryfall, "nome":nome, "qntCartas":qntCartas})
+
+        with open(setJson, "w", encoding="utf-8") as arquivo:
+            json.dump(dictEdicao, arquivo, ensure_ascii=False, indent=4)
+        return dictEdicao
+
+    with open(setJson, "r", encoding="utf-8") as arquivo:
+        return json.load(arquivo)
+
 
 def pegarCotacaoDollar(url):
     try:
