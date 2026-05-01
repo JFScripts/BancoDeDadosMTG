@@ -49,7 +49,7 @@ def main():
                 adicionarNovaCarta(conexao, catalogo)
             case 2:
                 minhaPasta = lerTabela(conexao, "cartas")
-                listarCartas(minhaPasta, cotacao, catalogo)
+                listarCartas(minhaPasta, cotacao, catalogo, edicoes)
             case 3:
                 atualizarCarta(conexao, cotacao, catalogo)
             case 4:

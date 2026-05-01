@@ -66,19 +66,22 @@ def carregarCatalogo(dataBase, catalogoNome, precisaLimpar):
             catalogo[cartaNome] = []
         edicao = carta["set"]
         idScryfall = carta["id"]
-        cor = carta["color_identity"]
-        precoNormal = carta["prices"]["usd"]
-        precoFoil = carta["prices"]["usd_foil"]
-        precoEtched = carta["prices"]["usd_etched"]
+        cor = "".join(carta["color_identity"])
+
+        precos = carta["prices"]
+        dictPrecos = {
+            "nonfoil": float(precos.get("usd") or 0.0),
+            "foil": float(precos.get("usd_foil") or 0.0),
+            "etched": float(precos.get("usd_etched") or 0.0)
+        }
+
         acabamentos = carta["finishes"]
 
         catalogo[cartaNome].append({"edicao": edicao, 
         "idScryfall": idScryfall, 
-        "precoNormal": precoNormal or 0.0, 
-        "precoFoil": precoFoil or 0.0, 
-        "precoEtched": precoEtched or 0.0, 
-        "cor": cor or [], 
-        "acabamento": acabamentos})
+        "cor": cor, 
+        "acabamento": acabamentos,
+        "precos": dictPrecos})
 
     with open(catalogoNome, "w", encoding="utf-8") as arquivo:
         json.dump(catalogo, arquivo, ensure_ascii=False, indent=4)

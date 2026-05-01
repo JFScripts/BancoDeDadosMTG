@@ -9,8 +9,9 @@ def criarColecao(dataBase):
         idScryfall TEXT,
         nome TEXT,
         edicao TEXT,
-        qntNormal INTEGER,
-        qntFoil INTEGER,
+        qnt INTEGER,
+        preco REAL,
+        material TEXT,
         cor TEXT
     )""")
     conexao.commit()

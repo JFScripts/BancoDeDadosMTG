@@ -6,38 +6,46 @@ def adicionarNovaCarta(conexao, catalogo):
     while nomeCarta not in catalogo:
         nomeCarta = input("\nDigite o nome da carta ou digite 0 para sair:\n> ").lower()
         if nomeCarta == "0":
-            break
-            
-    if nomeCarta == "0":
-        print("\nRetornando para o menu")
-        return
-
-    qntCartas = int(input("\nDigite a quantidade de cartas:\n> "))
-    
-    ehFoil = input("A Carta é FOIL? (S/N):\n> ").lower()
-    qntNormal = 0
-    qntFoil = 0
-    if ehFoil == "s":
-        qntFoil = qntCartas
-    else:
-        qntNormal = qntCartas
-
+            print("\nRetornando para o menu")
+            return
+                    
     versoes = catalogo[nomeCarta]
-
     vEscolhida = -1
     while vEscolhida < 0 or vEscolhida >= len(versoes):
+        print("\n")
         for i, versao in enumerate(versoes):
-            print(f"[{i}] Edição: {versao['edicao']} - Preço {versao['preco']}")
+            print(f"[{i}] Edição: {versao['edicao']}")
         vEscolhida = int(input("\nDigite o número da versão:\n> "))
-            
-    idScryfall = catalogo[nomeCarta][vEscolhida]["idScryfall"]
-    edicao = catalogo[nomeCarta][vEscolhida]["edicao"]
-    corLista = catalogo[nomeCarta][vEscolhida]["cor"]
-    cor = ""
     
-    for identidade in corLista:
-        cor += str(identidade)
-    dictNovaCarta = {"nome":nomeCarta, "idScryfall": idScryfall, "qntNormal":qntNormal, "qntFoil":qntFoil, "edicao": edicao, "cor": cor}
+    cartaSelecionada = catalogo[nomeCarta][vEscolhida]
+
+    acabamento = cartaSelecionada["acabamento"]
+    if len(acabamento) > 1:
+        materialEscolhido = ""
+        while materialEscolhido not in acabamento:
+            print("\n")
+            for i, material in enumerate(acabamento):
+                print(f"[{i}] - {material}")
+            materialEscolhido = acabamento[int(input("\nSelecione o tipo da carta:\n>"))]
+    else:
+        materialEscolhido = acabamento[0]
+
+    qntCartas = -1
+    while qntCartas <= 0:
+        qntCartas = int(input("\nDigite a quantidade de cartas:\n>"))
+     
+    preco = cartaSelecionada["precos"][materialEscolhido]
+    idScryfall = cartaSelecionada["idScryfall"]
+    edicao = cartaSelecionada["edicao"]
+    cor = cartaSelecionada["cor"]
+   
+    dictNovaCarta = {"nome":nomeCarta, 
+    "idScryfall": idScryfall, 
+    "material": materialEscolhido, 
+    "qnt": qntCartas,
+    "preco": preco, 
+    "edicao": edicao, 
+    "cor": cor}
     adicionarValorTabela(conexao, "cartas", dictNovaCarta)
 
 def atualizarCarta(conexao, cotacao, catalogo):
@@ -121,34 +129,27 @@ def deletarCarta(conexao, cotacao, catalogo):
         
     print(output)
 
-def listarCartas(lista, valorDollar, catalogo):
-    print(f"{'NOME':25} | {'SET':6} | {'QTD NORMAL':10} | {'QTD FOIL':8} | {'QTD TOTAL':9} | {'PREÇO TOTAL (R$)'}")
-    print("-" * 85)
+def listarCartas(lista, valorDollar, catalogo, edicoes):
+    print(f"{'NOME':^25} | {'EDIÇÃO':^20} | {'METERIAL':^10} | {'QTD':^8} | {'PRECO':^9} | {'PREÇO TOTAL (R$)'}")
+    print("-" * 90)
     
     valorTotalColecao = 0.0
     
     for carta in lista:
-        qntTotal = carta['qntNormal'] + carta['qntFoil']
-        nomeBanco = carta['nome']
-        edicaoBanco = carta['edicao']
-        
-        precoDolar = 0.0 
-        if nomeBanco in catalogo:
-            versoes = catalogo[nomeBanco]
-            for versao in versoes:
-                if versao['edicao'] == edicaoBanco:
-                    precoDolar = float(versao['preco'])
-                    break 
-                    
-        precoReal = precoDolar * valorDollar
-        valorDaLinha = precoReal * qntTotal
+        qnt = carta["qnt"]
+        nomeCarta = carta["nome"]
+        edicao = edicoes[carta["edicao"]][0]["nome"]
+        material = carta["material"]
+        precoReal = carta["preco"] * valorDollar
+        valorDaLinha = precoReal * qnt
         
         valorTotalColecao += valorDaLinha
         
-        print(f"{nomeBanco.title():25} | {edicaoBanco:6} | {carta['qntNormal']:10} | {carta['qntFoil']:8} | {qntTotal:9} | R$ {valorDaLinha:8.2f}")
+        print(f"{nomeCarta.title():^25} | {edicao:^20} | {material:^10} | {qnt:^8} | R${precoReal:9.2f} | R$ {valorDaLinha:8.2f}")
         
-    print("-" * 85)
+    print("-" * 90)
     print(f"VALOR TOTAL DA COLEÇÃO: R$ {valorTotalColecao:.2f}\n")
+    input("\nPressione ENTER para voltar ao menu.\n")
 
 def gerarGraficoCores(conexao):
     cartas = lerTabela(conexao, "cartas")
