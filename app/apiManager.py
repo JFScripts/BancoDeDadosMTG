@@ -76,12 +76,19 @@ def carregarCatalogo(dataBase, catalogoNome, precisaLimpar):
         }
 
         acabamentos = carta["finishes"]
+        if "image_uris" in carta:
+            imagem = carta["image_uris"]["normal"]
+        elif "card_faces" in carta and "image_uris" in carta["card_faces"][0]:
+            imagem = carta["card_faces"][0]["image_uris"]["normal"]
+        else:
+            imagem = ""
 
         catalogo[cartaNome].append({"edicao": edicao, 
         "idScryfall": idScryfall, 
         "cor": cor, 
         "acabamento": acabamentos,
-        "precos": dictPrecos})
+        "precos": dictPrecos,
+        "imagem": imagem})
 
     with open(catalogoNome, "w", encoding="utf-8") as arquivo:
         json.dump(catalogo, arquivo, ensure_ascii=False, indent=4)
@@ -99,8 +106,8 @@ def baixarEdicoes(setJson, url):
                 codigo = edicao["code"]
                 nome = edicao["name"]
                 qntCartas = edicao["card_count"]
-                dictEdicao[codigo] = []
-                dictEdicao[codigo].append({"id":idScryfall, "nome":nome, "qntCartas":qntCartas})
+                icone = edicao["icon_svg_uri"]
+                dictEdicao[codigo] = {"id":idScryfall, "nome":nome, "qntCartas":qntCartas, "icone": icone}
 
         with open(setJson, "w", encoding="utf-8") as arquivo:
             json.dump(dictEdicao, arquivo, ensure_ascii=False, indent=4)

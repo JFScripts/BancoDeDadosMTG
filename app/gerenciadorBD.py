@@ -12,7 +12,8 @@ def criarColecao(dataBase):
         qnt INTEGER,
         preco REAL,
         material TEXT,
-        cor TEXT
+        cor TEXT,
+        imagem TEXT
     )""")
     conexao.commit()
     conexao.close()

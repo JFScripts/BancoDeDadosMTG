@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{titulo}}</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121212; 
+            color: #ffffff;
+            padding: 20px;
+        }
+        h1 { color: #ff9900}
+        
+        .grid-cartas {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .card {
+            background-color: #1e1e1e;
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 15px;
+            width: 200px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+        }
+        .card-titulo { font-size: 1.2em; font-weight: bold; margin-bottom: 5px; text-transform: capitalize;}
+        .card-edicao { color: #888; font-size: 0.9em; margin-bottom: 15px;}
+        .card-info { font-size: 0.95em; color: #ddd; }
+        .card img {width: 100%;border-radius: 4.8%;}
+    </style>
+</head>
+<body>
+
+    <h1>Minha Coleção de Magic</h1>
+
+    <div id="minha-colecao" class="grid-cartas"></div>
+
+    <script>
+        
+        fetch('http://127.0.0.1:8000/cartas')
+            .then(resposta => resposta.json())
+            .then(dados => {
+                
+
+                const grid = document.getElementById('minha-colecao');
+
+                dados.colecao.forEach(carta => {
+                    const div = document.createElement('div');
+                    div.className = 'card';
+                    
+                    div.innerHTML = `
+                        <img src = ${carta.imagem} alt = ${carta.nome}>
+                        <div class="card-titulo">${carta.nome}</div>
+                        <div class="card-edicao">Edição: ${carta.edicao}</div>
+                        <div class="card-info">
+                            <strong>Qtd:</strong> ${carta.qnt}<br>
+                            <strong>Preço:</strong> $${carta.preco}<br>
+                            <strong>Acabamento:</strong> ${carta.material}
+                        </div>
+                    `;
+                    
+                    grid.appendChild(div);
+                });
+            })
+            .catch(erro => console.error("Erro ao buscar as cartas:", erro));
+    </script>
+
+</body>
+</html>

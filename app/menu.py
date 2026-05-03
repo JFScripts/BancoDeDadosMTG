@@ -1,13 +1,28 @@
+import difflib
 import matplotlib.pyplot as plt
 from gerenciadorBD import adicionarValorTabela, lerTabela, atualizarTabela, deletarItemTabela
 
 def adicionarNovaCarta(conexao, catalogo):
     nomeCarta = ""
-    while nomeCarta not in catalogo:
+    listaNomes = []
+    
+    for nome in catalogo.keys():
+        listaNomes.append(nome)
+
+    while True:
         nomeCarta = input("\nDigite o nome da carta ou digite 0 para sair:\n> ").lower()
         if nomeCarta == "0":
             print("\nRetornando para o menu")
             return
+        if nomeCarta in listaNomes:
+            break
+        sugestoes = difflib.get_close_matches(nomeCarta, listaNomes, n=1, cutoff=0.6)
+        sugestao = sugestoes[0]
+        if sugestoes:
+            aceitarSugestao = input((f"Você quis dizer {sugestao}?(S/N)\n> ")).lower()
+            if aceitarSugestao == "s":
+                nomeCarta = sugestao
+                break
                     
     versoes = catalogo[nomeCarta]
     vEscolhida = -1
@@ -38,6 +53,7 @@ def adicionarNovaCarta(conexao, catalogo):
     idScryfall = cartaSelecionada["idScryfall"]
     edicao = cartaSelecionada["edicao"]
     cor = cartaSelecionada["cor"]
+    imagem = cartaSelecionada["imagem"]
    
     dictNovaCarta = {"nome":nomeCarta, 
     "idScryfall": idScryfall, 
@@ -45,7 +61,8 @@ def adicionarNovaCarta(conexao, catalogo):
     "qnt": qntCartas,
     "preco": preco, 
     "edicao": edicao, 
-    "cor": cor}
+    "cor": cor,
+    "imagem": imagem}
     adicionarValorTabela(conexao, "cartas", dictNovaCarta)
 
 def atualizarCarta(conexao, cotacao, catalogo):
@@ -130,24 +147,24 @@ def deletarCarta(conexao, cotacao, catalogo):
     print(output)
 
 def listarCartas(lista, valorDollar, catalogo, edicoes):
-    print(f"{'NOME':^25} | {'EDIÇÃO':^20} | {'METERIAL':^10} | {'QTD':^8} | {'PRECO':^9} | {'PREÇO TOTAL (R$)'}")
-    print("-" * 90)
+    print(f"{'NOME':^25} | {'EDIÇÃO':^40} | {'METERIAL':^10} | {'QTD':^8} | {'PRECO':^9} | {'PREÇO TOTAL (R$)'}")
+    print("-" * 150)
     
     valorTotalColecao = 0.0
     
     for carta in lista:
         qnt = carta["qnt"]
         nomeCarta = carta["nome"]
-        edicao = edicoes[carta["edicao"]][0]["nome"]
+        edicao = edicoes[carta["edicao"]]["nome"]
         material = carta["material"]
         precoReal = carta["preco"] * valorDollar
         valorDaLinha = precoReal * qnt
         
         valorTotalColecao += valorDaLinha
         
-        print(f"{nomeCarta.title():^25} | {edicao:^20} | {material:^10} | {qnt:^8} | R${precoReal:9.2f} | R$ {valorDaLinha:8.2f}")
+        print(f"{nomeCarta.title():^25} | {edicao:^40} | {material:^10} | {qnt:^8} | R${precoReal:9.2f} | R$ {valorDaLinha:10.2f}")
         
-    print("-" * 90)
+    print("-" * 150)
     print(f"VALOR TOTAL DA COLEÇÃO: R$ {valorTotalColecao:.2f}\n")
     input("\nPressione ENTER para voltar ao menu.\n")
 
