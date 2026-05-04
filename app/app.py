@@ -17,6 +17,7 @@ class NovaCarta(BaseModel):
         senha: str
         edicao: str
         acabamento: str
+        idScryfall: str
 
 class ApagarCarta(BaseModel):
     id: int
@@ -72,11 +73,11 @@ def adicionarCarta(pacote: NovaCarta):
         "nome": pacote.nome,
         "qnt": pacote.qnt,
         "edicao": pacote.edicao,
-        "acabamento": pacote.acabamento
+        "acabamento": pacote.acabamento,
+        "idScryfall": pacote.idScryfall
     }
 
     adicionarNovaCarta(dictNovaCarta, catalogo)
-    print(dictNovaCarta)
     return {"mensagem": f"A carta foi adicionada com sucesso"}
 
 @app.delete("/deletar")
@@ -99,21 +100,26 @@ def apagarCarta(pacote: ApagarCarta):
 @app.get("/buscar-foto")
 def devolverFoto(nome: str):
     try:
-        if nome in catalogo:
-            cartaAtual = catalogo[nome]
-            versoes = []
+        nome_busca = nome.lower()
+        if nome_busca in catalogo:
+            cartaAtual = catalogo[nome_busca]
             dictEdicao = {}
+            
             for edicaoItem in cartaAtual:
                 sigla = edicaoItem["edicao"]
-                dictEdicao[sigla] = {
+                id_scryfall = edicaoItem["idScryfall"]
+                
+                dictEdicao[id_scryfall] = {
+                    "sigla": sigla,
                     "nome": allEdicoes[sigla]["nome"],
                     "icone": allEdicoes[sigla]["icone"],
                     "imagemEdicao": edicaoItem["imagem"],
                     "acabamentos": edicaoItem["acabamento"]
                 }
                 
-        primeiraImagem = catalogo[nome.lower()][0]["imagem"]
-
-        return {"urlImagem": primeiraImagem, "edicoes":dictEdicao}
-    except:
-        return {"urlImagem": "/static/inexistente.jpg", "edicoes": {}}
+            primeiraImagem = cartaAtual[0]["imagem"]
+            return {"urlImagem": primeiraImagem, "edicoes": dictEdicao}
+    except Exception as e:
+        print("Erro ao buscar:", e)
+    
+    return {"urlImagem": "/static/inexistente.jpg", "edicoes": {}}

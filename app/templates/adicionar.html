@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+    <link rel="stylesheet" href="/static/toast.css">
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -11,55 +12,46 @@
             color: #ffffff;
             padding: 20px;
         }
-        .container{
+        .container {
             display: flex;
             gap: 50px;
             align-items: flex-start;
         }
-
-        form{
+        form {
             display: flex;
             flex-direction: column;
             gap: 10px;
         }
-
         .radio-acabamento input {
             display: none;
         }
-
         .icone-filtro {
             width: 35px;
             height: 35px;
             cursor: pointer;
             transition: transform 0.2s;
-            filter: drop-shadow(1px 1px 0px #ff9900) drop-shadow(-1px -1px 0px #ff9900) 
-                    drop-shadow(1px -1px 0px #ff9900) drop-shadow(-1px 1px 0px #ff9900);
+            filter: drop-shadow(1px 1px 0px #ff9900) drop-shadow(-1px -1px 0px #ff9900) drop-shadow(1px -1px 0px #ff9900) drop-shadow(-1px 1px 0px #ff9900);
         }
-
         .radio-acabamento.desativado {
             opacity: 0.2;
             pointer-events: none; 
             filter: grayscale(100%);
         }
-
         .radio-acabamento input:checked + img {
             transform: scale(1.3);
-            filter: drop-shadow(0px 0px 8px #ff9900); /
+            filter: drop-shadow(0px 0px 8px #ff9900); 
         }
-
         .carta-wrapper {
             perspective: 1000px;
             display: inline-flex; 
-            margin-bottom: 20px; /* Margem ajustada aqui */
+            margin-bottom: 20px; 
         }
-
         .carta-inner {
             position: relative;
             width: 400px;
             transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
             transform-style: preserve-3d;
         }
-
         .carta-face {
             width: 100%;
             backface-visibility: hidden; 
@@ -69,12 +61,10 @@
             overflow: hidden; 
             background-color: #121212;
         }
-
         .carta-frente {
             position: relative; 
             z-index: 2;
         }
-
         .carta-costas {
             position: absolute;
             top: 0;
@@ -83,23 +73,19 @@
             transform: rotateY(180deg);
             z-index: 1;
         }
-
         .carta-face img {
             width: 100%;
             display: block;
         }
-
         .carta-inner.girar-360 {
             transform: rotateY(360deg);
         }
-
         #preview {
             display: block;  
             margin-bottom: 0 !important;
             position: relative;
             z-index: 1; 
         }
-
         #preview-overlay {
             position: absolute;
             top: 0;
@@ -112,7 +98,6 @@
             transition: opacity 0.3s;
             z-index: 2; 
         }
-
         .efeito-foil #preview-overlay {
             opacity: 0.8;
             background: linear-gradient(
@@ -124,7 +109,6 @@
                 rgba(255, 255, 255, 0) 90%
             );
         }
-
         .efeito-etched #preview-overlay {
             opacity: 0.6;
             background: repeating-linear-gradient(
@@ -135,8 +119,6 @@
                 rgba(255, 255, 255, 0) 20%
             );
         }
-
-
         .item-historico {
             display: flex;
             align-items: center;
@@ -148,70 +130,14 @@
             transition: background-color 0.2s;
             font-size: 14px;
         }
-
         .item-historico:hover {
             background-color: #333;
             border-left: 3px solid #ff9900;
         }
-
         .icone-mini {
             width: 20px;
             height: 20px;
             filter: drop-shadow(1px 1px 0px #ff9900) drop-shadow(-1px -1px 0px #ff9900) drop-shadow(1px -1px 0px #ff9900) drop-shadow(-1px 1px 0px #ff9900);
-        }
-
-        #toast-container {
-            position: fixed;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .toast-aviso {
-            background-color: #1a1a1a;
-            color: #fff;
-            padding: 15px 20px;
-            border-radius: 8px;
-            border: 1px solid #333;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.6);
-            font-weight: bold;
-            text-align: center;
-            position: relative;
-            overflow: hidden; 
-            min-width: 300px;
-            animation: subirToast 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-        }
-
-        .toast-aviso.sucesso { border-top: 3px solid #00ff00; }
-        .toast-aviso.erro { border-top: 3px solid #ff5555; }
-
-        .toast-barra {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            height: 4px;
-            background-color: #ffffff;
-            width: 0%;
-            animation: carregarBarra 5s linear forwards;
-        }
-
-        @keyframes subirToast {
-            from { opacity: 0; transform: translateY(50px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes sumirToast {
-            from { opacity: 1; transform: translateY(0); }
-            to { opacity: 0; transform: translateY(50px); }
-        }
-
-        @keyframes carregarBarra {
-            from { width: 0%; }
-            to { width: 100%; }
         }
     </style>
 </head>
@@ -219,16 +145,13 @@
     <div class="container">
         <div class="carta-wrapper" id="wrapper-da-carta">
             <div class="carta-inner" id="inner-da-carta">
-                
                 <div class="carta-face carta-frente">  
                     <img id="preview" src="/static/verso.jpg" alt="frente">
                     <div id="preview-overlay"></div>
                 </div>
-
                 <div class="carta-face carta-costas">
                     <img src="/static/verso.jpg" alt="costas">
                 </div>
-
             </div>
         </div>
         <div>
@@ -269,10 +192,7 @@
                 <button type="submit">Adicionar</button>
                 <div id="area-historico" style="margin-top: 20px; border-top: 1px solid #333; padding-top: 10px;">
                     <h4 style="margin: 0 0 10px 0; color: #ff9900;">Últimas Adicionadas</h4>
-                    
-                    <div id="lista-historico" style="max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
-                        </div>
-
+                    <div id="lista-historico" style="max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;"></div>
                     <button type="button" id="btn-limpar" style="margin-top: 15px; width: 100%; padding: 10px; background-color: #ff9900; color: #000000; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; text-transform: uppercase; transition: filter 0.2s;">
                         Limpar Histórico
                     </button>
@@ -282,6 +202,7 @@
         <div id="container-do-menu" style="position: fixed; top: 20px; right: 20px;"></div>
     </div>
     
+    <script src="/static/toast.js"></script>
     <script>
         const inputNome = document.getElementById("nomeCarta")
         const imgPreview = document.getElementById("preview")
@@ -289,30 +210,6 @@
         const imgSimbolo = document.getElementById("simboloEdicao")
         const wrapper = document.getElementById("wrapper-da-carta")
         const innerCarta = document.getElementById("inner-da-carta")
-
-        function mostrarAviso(mensagem, tipo = "sucesso") {
-            let container = document.getElementById("toast-container");
-            if (!container) {
-                container = document.createElement("div");
-                container.id = "toast-container";
-                document.body.appendChild(container);
-            }
-
-            const toast = document.createElement("div");
-            toast.className = `toast-aviso ${tipo}`;
-            toast.textContent = mensagem;
-
-            const barra = document.createElement("div");
-            barra.className = "toast-barra";
-            
-            toast.appendChild(barra);
-            container.appendChild(toast);
-
-            setTimeout(() => {
-                toast.style.animation = "sumirToast 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards";
-                setTimeout(() => toast.remove(), 400); 
-            }, 5000);
-        }
 
         document.getElementById("btn-limpar").addEventListener("click", function() {
             document.getElementById("lista-historico").innerHTML = "";
@@ -368,7 +265,6 @@
                 if (!listaAcabamentos.includes(tipo)){
                     const label = document.getElementById(`label_${tipo}`)
                     const radio = document.getElementById(`radio_${tipo}`)
-
                     label.classList.add("desativado")
                     radio.disabled = true
                     if (radio.checked){
@@ -383,8 +279,7 @@
                 fetch(`/buscar-foto?nome=${encodeURIComponent(nomeDaCarta)}`)
                 .then(res => res.json())
                 .then(dados => {
-                    if (dados.urlImagem) {
-
+                    if (dados.urlImagem && dados.urlImagem !== "/static/inexistente.jpg") {
                         const linkLiga = document.getElementById("link-ligamagic");
                         const linkEDH = document.getElementById("link-edhrec");
                         
@@ -397,30 +292,32 @@
 
                         window.dadosEdicoesAtuais = dados.edicoes;
                         menuEdicoes.innerHTML = "";
-                        const siglas = Object.keys(dados.edicoes);
 
-                        if (siglas.length > 0) {
-                            siglas.forEach(sigla =>{
-                                const info = dados.edicoes[sigla];
+                        const idsScryfall = Object.keys(dados.edicoes);
+
+                        if (idsScryfall.length > 0) {
+                            idsScryfall.forEach(idUnico =>{
+                                const info = dados.edicoes[idUnico];
                                 const novaOpcao = document.createElement("option");
-                                novaOpcao.value = info.imagemEdicao;
-                                novaOpcao.textContent = sigla.toUpperCase();
+                                novaOpcao.value = idUnico;
+                                novaOpcao.textContent = info.sigla.toUpperCase();
                                 novaOpcao.title = info.nome;
                                 novaOpcao.setAttribute("data-icon", info.icone);
                                 menuEdicoes.appendChild(novaOpcao);
                             });
 
-                            let siglaFinal = siglas[0];
-                            if (siglaAlvo && siglas.includes(siglaAlvo)) {
-                                siglaFinal = siglaAlvo;
+                            let idFinal = idsScryfall[0];
+                            let infoFinal = dados.edicoes[idFinal];
+                            
+                            if (siglaAlvo) {
                                 Array.from(menuEdicoes.options).forEach((opt, index) => {
-                                    if (opt.textContent.toLowerCase() === siglaAlvo) {
+                                    if (opt.textContent.toLowerCase() === siglaAlvo.toLowerCase()) {
                                         menuEdicoes.selectedIndex = index;
+                                        idFinal = opt.value;
+                                        infoFinal = dados.edicoes[idFinal];
                                     }
                                 });
                             }
-
-                            const infoFinal = dados.edicoes[siglaFinal];
 
                             if (acabamentoAlvo) {
                                 const radio = document.getElementById(`radio_${acabamentoAlvo}`);
@@ -430,7 +327,7 @@
                             trocarCartaComFlip(
                                 infoFinal.imagemEdicao,
                                 infoFinal.acabamentos,
-                                siglaFinal,
+                                infoFinal.sigla,
                                 infoFinal.icone
                             );
                             
@@ -446,8 +343,11 @@
                             const opcaoVazia = document.createElement("option");
                             opcaoVazia.textContent = "Carta não encontrada";
                             menuEdicoes.appendChild(opcaoVazia);
-                            trocarCartaComFlip(dados.urlImagem, null, null, null);
+                            trocarCartaComFlip("/static/inexistente.jpg", null, null, null);
                         }
+                    } else {
+                        menuEdicoes.innerHTML = "<option value=''>Carta não encontrada</option>";
+                        trocarCartaComFlip("/static/inexistente.jpg", null, null, null);
                     }
                 });
             }
@@ -458,12 +358,12 @@
         });
 
         menuEdicoes.addEventListener("change", function(){
-            const siglaSelecionada = menuEdicoes.options[menuEdicoes.selectedIndex].textContent.toLowerCase();
-            const infoEdicao = window.dadosEdicoesAtuais[siglaSelecionada]
+            const idSelecionado = menuEdicoes.value;
+            const infoEdicao = window.dadosEdicoesAtuais[idSelecionado];
             trocarCartaComFlip(
                 infoEdicao.imagemEdicao, 
                 infoEdicao.acabamentos, 
-                siglaSelecionada, 
+                infoEdicao.sigla, 
                 infoEdicao.icone
             );
         })
@@ -485,29 +385,28 @@
             evento.preventDefault();
             const nomeCarta = document.getElementById('nomeCarta').value;
             const qntCarta = document.getElementById('qnt').value;
-            const qntNum = parseInt(qntCarta)
+            const qntNum = parseInt(qntCarta);
             if (isNaN(qntNum) || qntNum <= 0){
-                mostrarAviso("A quantidade de carta precisa ser pelo menos 1", "erro")
-                return
+                mostrarAviso("A quantidade de carta precisa ser pelo menos 1", "erro");
+                return;
             }
-            const menuEdicoes = document.getElementById("edicaoCarta")
             const siglaSelecionada = menuEdicoes.options[menuEdicoes.selectedIndex].textContent.toLowerCase();
+            const idScryfallSelecionado = menuEdicoes.value;
             if (siglaSelecionada === "carta não encontrada" || !siglaSelecionada){
-                mostrarAviso("Selecione uma Edição Valida antes de Adicionar!", "erro")
-                return
+                mostrarAviso("Selecione uma Edição Valida antes de Adicionar!", "erro");
+                return;
             }
 
-            const acabamentoSelecionado = document.querySelector('input[name="acabamento"]:checked').value
+            const acabamentoSelecionado = document.querySelector('input[name="acabamento"]:checked').value;
             const senhaDigitada = document.getElementById('senha').value;
             const pacote = {
                 nome: nomeCarta,
                 qnt: qntNum,
                 senha: senhaDigitada,
                 edicao: siglaSelecionada,
-                acabamento: acabamentoSelecionado
+                acabamento: acabamentoSelecionado,
+                idScryfall: idScryfallSelecionado
             };
-
-            console.log("Enviando pacote:", pacote)
 
             fetch("/adicionar", {
                 method: "POST",
@@ -516,7 +415,7 @@
             })
             .then(resposta => resposta.json())
             .then(dados => {
-                mostrarAviso(dados.mensagem)
+                if(dados.mensagem) mostrarAviso(dados.mensagem);
                 const listaHistorico = document.getElementById("lista-historico");
                 const novoItem = document.createElement("div");
                 novoItem.className = "item-historico";
@@ -535,7 +434,6 @@
 
                 novoItem.addEventListener("click", function() {
                     document.getElementById('nomeCarta').value = nomeCarta;
-                    
                     document.getElementById('qnt').value = qntCarta; 
                     
                     if (siglaNoMomento && siglaNoMomento !== "carta não encontrada") {
@@ -546,7 +444,10 @@
                 });
 
                 listaHistorico.prepend(novoItem);
-                document.getElementById('qnt').value = "";;
+                document.getElementById('qnt').value = "";
+            })
+            .catch(erro => {
+                mostrarAviso("Erro ao conectar com o servidor.", "erro");
             });
         });
 
@@ -559,16 +460,13 @@
         })
         .then(html => {
             document.getElementById("container-do-menu").innerHTML = html;
-            
             const btnMenu = document.getElementById("btn-toggle-menu");
             const corpoMenu = document.getElementById("corpo-do-menu");
-            
             btnMenu.addEventListener("click", function() {
                 corpoMenu.classList.toggle("recolhido");
             });
         })
-        .catch(erro => console.log("Erro ao Carregar o Menu: ", erro));
+        .catch(erro => {});
     </script>
-    
 </body>
 </html>

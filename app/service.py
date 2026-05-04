@@ -12,8 +12,9 @@ def adicionarNovaCarta(pacote, catalogo):
     qnt = pacote["qnt"]
     edicaoAtual = pacote["edicao"]
     acabamento = pacote["acabamento"]
+    idScryfall = pacote["idScryfall"]
 
-    cartasExistente = lerTabela(conexao, "cartas", {"nome":nomeCarta, "edicao": edicaoAtual, "material": acabamento})
+    cartasExistente = lerTabela(conexao, "cartas", {"idScryfall": idScryfall, "material": acabamento})
     
     if cartasExistente:
         cartasExistente = cartasExistente[0]
@@ -21,17 +22,15 @@ def adicionarNovaCarta(pacote, catalogo):
         novaQnt = qnt + cartasExistente["qnt"]
         atualizarTabela(conexao, "cartas", {"qnt": novaQnt}, idBD)
     else:
-        cartaAtual = catalogo[nomeCarta]
-        idScryfall = ""
+        cartaAtual = catalogo[nomeCarta.lower()]
         preco = 0.0
         cor = ""
         imagem = ""
-        for edicao in cartaAtual:
-            if edicao["edicao"] == edicaoAtual:
-                idScryfall = edicao["idScryfall"]
-                preco = edicao["precos"][acabamento]
-                cor = edicao["cor"]
-                imagem = edicao["imagem"]
+        for versao in cartaAtual:
+            if versao["idScryfall"] == idScryfall:
+                preco = versao["precos"][acabamento]
+                cor = versao["cor"]
+                imagem = versao["imagem"]
                 break
         dictNovaCarta = {
             "idScryfall": idScryfall,

@@ -156,12 +156,38 @@
             filter: drop-shadow(1px 1px 0px #ff9900) drop-shadow(-1px -1px 0px #ff9900) drop-shadow(1px -1px 0px #ff9900) drop-shadow(-1px 1px 0px #ff9900);
             transform: translateY(5px);
         }
+        .controles-colecao {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .controles-colecao select {
+            padding: 8px 15px;
+            border-radius: 5px;
+            background-color: #1e1e1e;
+            color: #fff;
+            border: 1px solid #ff9900;
+            font-weight: bold;
+            outline: none;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
 
     <h1>Minha Coleção de Magic</h1>
-
+    <div class="controles-colecao">
+            <label for="ordenar-por" style="font-weight: bold; color: #aaa;">Ordenar por: </label>
+            <select id="ordenar-por">
+                <option value="recente">Mais Recentes</option>
+                <option value="alfabetica">Ordem Alfabética (A-Z)</option>
+                <option value="preco-maior">Maior Preço</option>
+                <option value="quantidade">Maior Quantidade</option>
+                <option value="edicao">Edição (A-Z)</option>
+            </select>
+    </div>
     <div id="minha-colecao" class="grid-cartas"></div>
     <div id="container-do-menu" style="position: fixed; top: 20px; right: 20px;"></div>
 
@@ -183,11 +209,11 @@
     </div>
 
     <script>
+        let listaDeCartasAgrupadas = []
+
         fetch('/cartas')
             .then(resposta => resposta.json())
             .then(dados => {
-                const grid = document.getElementById('minha-colecao');
-
                 const cartasAgrupadas = {};
 
                 dados.colecao.forEach(carta => {
@@ -198,65 +224,94 @@
                             nome: carta.nome,
                             edicao: carta.edicao,
                             imagem: carta.imagem,
-                            versoes: [] 
+                            versoes: [],
+                            idMaisRecente: 0,
+                            precoMaximo: 0,
+                            qntTotal: 0
                         };
                     }
+                    
                     cartasAgrupadas[chave].versoes.push(carta);
+                    
+                    if (carta.id > cartasAgrupadas[chave].idMaisRecente) cartasAgrupadas[chave].idMaisRecente = carta.id;
+                    if (carta.preco > cartasAgrupadas[chave].precoMaximo) cartasAgrupadas[chave].precoMaximo = carta.preco;
+                    cartasAgrupadas[chave].qntTotal += carta.qnt;
                 });
 
-                Object.values(cartasAgrupadas).forEach(grupo => {
-                    const div = document.createElement('div');
-                    div.className = 'card';
-                    
-                    let infoVersoesHTML = '';
-                    let idsParaApagar = []; 
+                listaDeCartasAgrupadas = Object.values(cartasAgrupadas);
 
-                    grupo.versoes.forEach(versao => {
-                        idsParaApagar.push(versao.id); 
-
-                        let caminhoIcone = '/static/nonfoil.png';
-                        if (versao.material === 'foil') caminhoIcone = '/static/foil.png';
-                        if (versao.material === 'etched') caminhoIcone = '/static/etched.png';
-
-                        infoVersoesHTML += `
-                            <div class="linha-versao">
-                                <span title="${versao.material}" style="text-transform: capitalize; display: flex; align-items: center; gap: 8px;">
-                                    <img src="${caminhoIcone}" class="icone-mini-card" alt="${versao.material}"> 
-                                    ${versao.material}:
-                                </span> 
-                                <span><strong>${versao.qnt}x</strong> ($${versao.preco})</span>
-                            </div>
-                        `;
-                    });
-
-                    div.innerHTML = `
-                        <img src="${grupo.imagem}" alt="${grupo.nome}">
-                        <div class="card-titulo">${grupo.nome}</div>
-                        
-                        <div class="card-edicao" style="display: flex; align-items: center; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #333;">
-                            <img src="https://svgs.scryfall.io/sets/${grupo.edicao}.svg" title="Edição: ${grupo.edicao.toUpperCase()}" alt="${grupo.edicao}" style="width: 24px; filter: drop-shadow(1px 1px 0px #ff9900) drop-shadow(-1px -1px 0px #ff9900) drop-shadow(1px -1px 0px #ff9900) drop-shadow(-1px 1px 0px #ff9900);">
-                        </div>
-                        
-                        <div class="card-info">
-                            ${infoVersoesHTML}
-                        </div>
-                        <button class="btn-deletar">
-                            ✖ Excluir Carta
-                        </button>
-                    `;
-                    
-                    const btnDeletar = div.querySelector('.btn-deletar');
-                    btnDeletar.addEventListener('click', function() {
-                        abrirModal(idsParaApagar, grupo.nome);
-                    });
-                    
-                    grid.appendChild(div);
-                });
+                ordenarERenderizar('recente');
             })
             .catch(erro => {
                 console.error("Erro ao buscar as cartas:", erro);
-                alert("Erro ao carregar a coleção. Aperte F12 e olhe o Console!");
+                mostrarAviso("Erro ao carregar a coleção. Aperte F12!", "erro");
             });
+
+        function ordenarERenderizar(criterio) {
+            const grid = document.getElementById('minha-colecao');
+            grid.innerHTML = ''; 
+
+            listaDeCartasAgrupadas.sort((a, b) => {
+                if (criterio === 'recente') return b.idMaisRecente - a.idMaisRecente; 
+                if (criterio === 'alfabetica') return a.nome.localeCompare(b.nome); 
+                if (criterio === 'preco-maior') return b.precoMaximo - a.precoMaximo; 
+                if (criterio === 'quantidade') return b.qntTotal - a.qntTotal;
+                if (criterio === 'edicao') return a.edicao.localeCompare(b.edicao); 
+            });
+
+            listaDeCartasAgrupadas.forEach(grupo => {
+                const div = document.createElement('div');
+                div.className = 'card';
+                
+                let infoVersoesHTML = '';
+                let idsParaApagar = []; 
+
+                grupo.versoes.forEach(versao => {
+                    idsParaApagar.push(versao.id); 
+
+                    let caminhoIcone = '/static/nonfoil.png';
+                    if (versao.material === 'foil') caminhoIcone = '/static/foil.png';
+                    if (versao.material === 'etched') caminhoIcone = '/static/etched.png';
+
+                    infoVersoesHTML += `
+                        <div class="linha-versao">
+                            <span title="${versao.material}" style="text-transform: capitalize; display: flex; align-items: center; gap: 8px;">
+                                <img src="${caminhoIcone}" class="icone-mini-card" alt="${versao.material}"> 
+                                ${versao.material}:
+                            </span> 
+                            <span><strong>${versao.qnt}x</strong> ($${versao.preco})</span>
+                        </div>
+                    `;
+                });
+
+                div.innerHTML = `
+                    <img src="${grupo.imagem}" alt="${grupo.nome}">
+                    <div class="card-titulo">${grupo.nome}</div>
+                    
+                    <div class="card-edicao" style="display: flex; align-items: center; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #333;">
+                        <img src="https://svgs.scryfall.io/sets/${grupo.edicao}.svg" title="Edição: ${grupo.edicao.toUpperCase()}" alt="${grupo.edicao}" style="width: 24px; filter: drop-shadow(1px 1px 0px #ff9900) drop-shadow(-1px -1px 0px #ff9900) drop-shadow(1px -1px 0px #ff9900) drop-shadow(-1px 1px 0px #ff9900);">
+                    </div>
+                    
+                    <div class="card-info">
+                        ${infoVersoesHTML}
+                    </div>
+                    <button class="btn-deletar">
+                        ✖ Excluir Carta
+                    </button>
+                `;
+                
+                const btnDeletar = div.querySelector('.btn-deletar');
+                btnDeletar.addEventListener('click', function() {
+                    abrirModal(idsParaApagar, grupo.nome);
+                });
+                
+                grid.appendChild(div);
+            });
+        }
+
+        document.getElementById('ordenar-por').addEventListener('change', function() {
+            ordenarERenderizar(this.value);
+        });
         let idsAlvoDelete = [];
 
         function abrirModal(listaIds, nomeCarta) {
