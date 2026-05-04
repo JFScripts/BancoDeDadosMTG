@@ -8,6 +8,16 @@ from fastapi.staticfiles import StaticFiles
 from app.gerenciadorBD import lerTabela 
 from dotenv import load_dotenv
 from pydantic import BaseModel
+from app.service import adicionarNovaCarta
+
+
+class NovaCarta(BaseModel):
+        nome: str
+        qnt: int
+        senha: str
+        edicao: str
+        acabamento: str
+
 
 load_dotenv()
 
@@ -19,12 +29,7 @@ with open("Catalogo.json", "r", encoding="utf-8") as arquivo:
                 catalogo = json.load(arquivo)
 with open("edicoes.json", "r", encoding="utf-8") as arquivo:
                 allEdicoes = json.load(arquivo)
-
-class NovaCarta(BaseModel):
-        nome: str
-        qnt: int
-        senha: str
-        
+      
 @app.get("/")
 def home(request: Request):
     titulo = os.getenv("TITULO_SITE", "Minha Coleção MTG")
@@ -62,8 +67,12 @@ def adicionarCarta(pacote: NovaCarta):
         return {"mensagem": "Acesso Negado! Senha Incorreta."}
     dictNovaCarta = {
         "nome": pacote.nome,
-        "qnt": pacote.qnt
+        "qnt": pacote.qnt,
+        "edicao": pacote.edicao,
+        "acabamento": pacote.acabamento
     }
+
+    adicionarNovaCarta(dictNovaCarta, catalogo)
     print(dictNovaCarta)
     return {"mensagem": f"A carta foi adicionada com sucesso"}
 

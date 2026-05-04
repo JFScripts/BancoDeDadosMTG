@@ -159,6 +159,60 @@
             height: 20px;
             filter: drop-shadow(1px 1px 0px #ff9900) drop-shadow(-1px -1px 0px #ff9900) drop-shadow(1px -1px 0px #ff9900) drop-shadow(-1px 1px 0px #ff9900);
         }
+
+        #toast-container {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast-aviso {
+            background-color: #1a1a1a;
+            color: #fff;
+            padding: 15px 20px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.6);
+            font-weight: bold;
+            text-align: center;
+            position: relative;
+            overflow: hidden; 
+            min-width: 300px;
+            animation: subirToast 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        .toast-aviso.sucesso { border-top: 3px solid #00ff00; }
+        .toast-aviso.erro { border-top: 3px solid #ff5555; }
+
+        .toast-barra {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 4px;
+            background-color: #ffffff;
+            width: 0%;
+            animation: carregarBarra 5s linear forwards;
+        }
+
+        @keyframes subirToast {
+            from { opacity: 0; transform: translateY(50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes sumirToast {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(50px); }
+        }
+
+        @keyframes carregarBarra {
+            from { width: 0%; }
+            to { width: 100%; }
+        }
     </style>
 </head>
 <body>
@@ -179,12 +233,20 @@
         </div>
         <div>
             <form>
-                <input type="text" id="nomeCarta" placeholder="Nome da Carta">
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="text" id="nomeCarta" placeholder="Nome da Carta" style="flex-grow: 1;">
+                    <a id="link-ligamagic" href="#" target="_blank" title="Ver Preços na LigaMagic" style="display: none;">
+                        <img src="/static/LigaMagicLogo.jpg" alt="LigaMagic" style="height: 25px;">
+                    </a>
+                </div>
                 <div style="display: flex; gap: 10px; align-items: center;">
                     <select id="edicaoCarta" style="flex-grow: 1; padding: 5px;">
                         <option value="" title="Aguardando Digitar o Nome da Carta">Digite o Nome da Carta</option>
                     </select>
-                    <img id="simboloEdicao" src="" alt="simbolo" style="width: 30px; height: 30px; display: none;filter: drop-shadow(1px 1px 0px #ff9900)drop-shadow(-1px -1px 0px #ff9900)drop-shadow(1px -1px 0px #ff9900)drop-shadow(-1px 1px 0px #ff9900);">
+                    <img id="simboloEdicao" src="" alt="simbolo" style="width: 30px; height: 30px; display: none; filter: drop-shadow(1px 1px 0px #ff9900) drop-shadow(-1px -1px 0px #ff9900) drop-shadow(1px -1px 0px #ff9900) drop-shadow(-1px 1px 0px #ff9900);">
+                    <a id="link-edhrec" href="#" target="_blank" title="Ver Sinergias no EDHREC" style="display: none;">
+                        <img src="/static/edhreclogo.png" alt="EDHREC" style="height: 25px;">
+                    </a>
                 </div>
                 <div id="containerAcabamentos" style="display: flex; gap: 20px; margin-top: 10px;">
                     <label class="radio-acabamento" id="label_nonfoil">
@@ -217,6 +279,7 @@
                 </div>
             </form>
         </div>
+        <div id="container-do-menu" style="position: fixed; top: 20px; right: 20px;"></div>
     </div>
     
     <script>
@@ -224,8 +287,32 @@
         const imgPreview = document.getElementById("preview")
         const menuEdicoes = document.getElementById("edicaoCarta")
         const imgSimbolo = document.getElementById("simboloEdicao")
-        const wrapper = document.getElementById("wrapper-da-carta");
+        const wrapper = document.getElementById("wrapper-da-carta")
         const innerCarta = document.getElementById("inner-da-carta")
+
+        function mostrarAviso(mensagem, tipo = "sucesso") {
+            let container = document.getElementById("toast-container");
+            if (!container) {
+                container = document.createElement("div");
+                container.id = "toast-container";
+                document.body.appendChild(container);
+            }
+
+            const toast = document.createElement("div");
+            toast.className = `toast-aviso ${tipo}`;
+            toast.textContent = mensagem;
+
+            const barra = document.createElement("div");
+            barra.className = "toast-barra";
+            
+            toast.appendChild(barra);
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = "sumirToast 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards";
+                setTimeout(() => toast.remove(), 400); 
+            }, 5000);
+        }
 
         document.getElementById("btn-limpar").addEventListener("click", function() {
             document.getElementById("lista-historico").innerHTML = "";
@@ -263,17 +350,7 @@
                     innerCarta.style.transition = "transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1)";
                 }, 50);
             }, 600);
-        }
-
-            setTimeout(() => {
-                innerCarta.style.transition = "none"; 
-                innerCarta.classList.remove("girar-360"); 
-                
-                setTimeout(() => {
-                    innerCarta.style.transition = "transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1)";
-                }, 50);
-            }, 600);
-        
+        }        
 
         function resetarAcabamento(){
             wrapper.classList.remove("efeito-foil", "efeito-etched")
@@ -307,6 +384,17 @@
                 .then(res => res.json())
                 .then(dados => {
                     if (dados.urlImagem) {
+
+                        const linkLiga = document.getElementById("link-ligamagic");
+                        const linkEDH = document.getElementById("link-edhrec");
+                        
+                        linkLiga.style.display = "block";
+                        linkEDH.style.display = "block";
+                        linkLiga.href = `https://www.ligamagic.com.br/?view=cartas/card&card=${encodeURIComponent(nomeDaCarta)}`;
+                        
+                        const nomeFormatadoEDH = nomeDaCarta.toLowerCase().replace(/ /g, "-").replace(/[^a-z0-9-]/g, "");
+                        linkEDH.href = `https://edhrec.com/cards/${nomeFormatadoEDH}`;
+
                         window.dadosEdicoesAtuais = dados.edicoes;
                         menuEdicoes.innerHTML = "";
                         const siglas = Object.keys(dados.edicoes);
@@ -399,15 +487,27 @@
             const qntCarta = document.getElementById('qnt').value;
             const qntNum = parseInt(qntCarta)
             if (isNaN(qntNum) || qntNum <= 0){
-                alert("A quantidade de carta precisa ser pelo menos 1")
+                mostrarAviso("A quantidade de carta precisa ser pelo menos 1", "erro")
                 return
             }
+            const menuEdicoes = document.getElementById("edicaoCarta")
+            const siglaSelecionada = menuEdicoes.options[menuEdicoes.selectedIndex].textContent.toLowerCase();
+            if (siglaSelecionada === "carta não encontrada" || !siglaSelecionada){
+                mostrarAviso("Selecione uma Edição Valida antes de Adicionar!", "erro")
+                return
+            }
+
+            const acabamentoSelecionado = document.querySelector('input[name="acabamento"]:checked').value
             const senhaDigitada = document.getElementById('senha').value;
             const pacote = {
                 nome: nomeCarta,
-                qnt: qntCarta,
-                senha: senhaDigitada
+                qnt: qntNum,
+                senha: senhaDigitada,
+                edicao: siglaSelecionada,
+                acabamento: acabamentoSelecionado
             };
+
+            console.log("Enviando pacote:", pacote)
 
             fetch("/adicionar", {
                 method: "POST",
@@ -416,7 +516,7 @@
             })
             .then(resposta => resposta.json())
             .then(dados => {
-                alert(dados.mensagem)
+                mostrarAviso(dados.mensagem)
                 const listaHistorico = document.getElementById("lista-historico");
                 const novoItem = document.createElement("div");
                 novoItem.className = "item-historico";
@@ -449,7 +549,25 @@
                 document.getElementById('qnt').value = "";;
             });
         });
-        
+
+        fetch("/static/menu.html") 
+        .then(resposta => {
+            if (!resposta.ok) {
+                throw new Error("Arquivo do menu não encontrado.");
+            }
+            return resposta.text();
+        })
+        .then(html => {
+            document.getElementById("container-do-menu").innerHTML = html;
+            
+            const btnMenu = document.getElementById("btn-toggle-menu");
+            const corpoMenu = document.getElementById("corpo-do-menu");
+            
+            btnMenu.addEventListener("click", function() {
+                corpoMenu.classList.toggle("recolhido");
+            });
+        })
+        .catch(erro => console.log("Erro ao Carregar o Menu: ", erro));
     </script>
     
 </body>

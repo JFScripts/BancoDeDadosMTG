@@ -39,10 +39,11 @@
     <h1>Minha Coleção de Magic</h1>
 
     <div id="minha-colecao" class="grid-cartas"></div>
+    <div id="container-do-menu" style="position: fixed; top: 20px; right: 20px;"></div>
 
     <script>
         
-        fetch('http://127.0.0.1:8000/cartas')
+        fetch('/cartas')
             .then(resposta => resposta.json())
             .then(dados => {
                 
@@ -68,6 +69,25 @@
                 });
             })
             .catch(erro => console.error("Erro ao buscar as cartas:", erro));
+
+            fetch("/static/menu.html") 
+        .then(resposta => {
+            if (!resposta.ok) {
+                throw new Error("Arquivo do menu não encontrado.");
+            }
+            return resposta.text();
+        })
+        .then(html => {
+            document.getElementById("container-do-menu").innerHTML = html;
+            
+            const btnMenu = document.getElementById("btn-toggle-menu");
+            const corpoMenu = document.getElementById("corpo-do-menu");
+            
+            btnMenu.addEventListener("click", function() {
+                corpoMenu.classList.toggle("recolhido");
+            });
+        })
+        .catch(erro => console.log("Erro ao Carregar o Menu: ", erro));
     </script>
 
 </body>
