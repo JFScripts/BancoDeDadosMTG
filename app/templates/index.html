@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{titulo}}</title>
+    <link rel="stylesheet" href="/static/toast.css">
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -27,11 +28,134 @@
             padding: 15px;
             width: 200px;
             box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+            transition: transform 0.2s, box-shadow 0.2s; 
+            display: flex;
+            flex-direction: column;
         }
-        .card-titulo { font-size: 1.2em; font-weight: bold; margin-bottom: 5px; text-transform: capitalize;}
-        .card-edicao { color: #888; font-size: 0.9em; margin-bottom: 15px;}
-        .card-info { font-size: 0.95em; color: #ddd; }
-        .card img {width: 100%;border-radius: 4.8%;}
+
+        .card:hover {
+            transform: translateY(-5px); 
+            box-shadow: 0 8px 20px rgba(255, 153, 0, 0.5); 
+        }
+        
+        .card-titulo { 
+            font-size: 1.1em; 
+            font-weight: bold; 
+            margin-bottom: 5px; 
+            text-transform: capitalize;
+            min-height: 2.6em; 
+            display: -webkit-box;
+            -webkit-line-clamp: 2; 
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .card-edicao { color: #888; font-size: 0.9em; margin-bottom: 15px; text-transform: uppercase; font-weight: bold;}
+        
+        .card-info { 
+            font-size: 0.95em; 
+            color: #ddd; 
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            margin-bottom: 10px;
+        }
+        .card img {width: 100%; border-radius: 4.8%; margin-bottom: 10px;}
+
+        .linha-versao {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #333;
+            padding-bottom: 5px;
+            margin-bottom: 5px;
+        }
+        .linha-versao:last-child {
+            border-bottom: none; 
+        }
+
+        .btn-deletar {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px;
+            margin-top: 15px; 
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+            opacity: 0; 
+            visibility: hidden; 
+            transition: opacity 0.2s, filter 0.2s;
+        }
+
+        .card:hover .btn-deletar {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .btn-deletar:hover {
+            filter: brightness(1.2);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none; 
+            transition: opacity 0.3s;
+        }
+        .modal-overlay.ativo {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal-box {
+            background-color: #1e1e1e;
+            border: 2px solid #ff5555;
+            border-radius: 10px;
+            padding: 25px;
+            width: 350px;
+            text-align: center;
+            box-shadow: 0 0 30px rgba(255, 85, 85, 0.4);
+        }
+        .modal-box h2 { color: #ff5555; margin-top: 0; }
+        .modal-box input {
+            width: 90%;
+            padding: 10px;
+            margin: 15px 0;
+            border-radius: 5px;
+            border: 1px solid #555;
+            background-color: #121212;
+            color: white;
+        }
+        .botoes-modal {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        .btn-confirmar-vermelho {
+            background-color: #dc3545; color: white; border: none; padding: 10px; flex-grow: 1; border-radius: 5px; cursor: pointer; font-weight: bold;
+        }
+        .btn-cancelar-verde {
+            background-color: #28a745; color: white; border: none; padding: 10px; flex-grow: 1; border-radius: 5px; cursor: pointer; font-weight: bold;
+        }
+
+        .icone-mini-card {
+            width: 16px;
+            height: 16px;
+            filter: drop-shadow(1px 1px 0px #ff9900) drop-shadow(-1px -1px 0px #ff9900) drop-shadow(1px -1px 0px #ff9900) drop-shadow(-1px 1px 0px #ff9900);
+            transform: translateY(5px);
+        }
     </style>
 </head>
 <body>
@@ -41,45 +165,161 @@
     <div id="minha-colecao" class="grid-cartas"></div>
     <div id="container-do-menu" style="position: fixed; top: 20px; right: 20px;"></div>
 
+    <div id="modal-deletar" class="modal-overlay">
+        <div class="modal-box">
+            <h2>⚠️ ALERTA DE EXCLUSÃO</h2>
+            <p>Você está prestes a apagar <strong>TODAS</strong> as cópias de:<br>
+                <span id="nome-carta-alvo" style="color: #ff9900; font-size: 1.2em; font-weight: bold; display: block; margin-top: 10px;"></span>
+            </p>
+            <p style="font-size: 0.9em; color: #aaa;">Esta ação é permanente. Digite a senha para confirmar:</p>
+            
+            <input type="password" id="senha-deletar" placeholder="Senha de Admin">
+            
+            <div class="botoes-modal">
+                <button class="btn-confirmar-vermelho" id="btn-confirma-exclusao">Apagar Tudo</button>
+                <button class="btn-cancelar-verde" onclick="fecharModal()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        
         fetch('/cartas')
             .then(resposta => resposta.json())
             .then(dados => {
-                
-
                 const grid = document.getElementById('minha-colecao');
 
+                const cartasAgrupadas = {};
+
                 dados.colecao.forEach(carta => {
+                    const chave = carta.nome + "_" + carta.edicao;
+                    
+                    if (!cartasAgrupadas[chave]) {
+                        cartasAgrupadas[chave] = {
+                            nome: carta.nome,
+                            edicao: carta.edicao,
+                            imagem: carta.imagem,
+                            versoes: [] 
+                        };
+                    }
+                    cartasAgrupadas[chave].versoes.push(carta);
+                });
+
+                Object.values(cartasAgrupadas).forEach(grupo => {
                     const div = document.createElement('div');
                     div.className = 'card';
                     
+                    let infoVersoesHTML = '';
+                    let idsParaApagar = []; 
+
+                    grupo.versoes.forEach(versao => {
+                        idsParaApagar.push(versao.id); 
+
+                        let caminhoIcone = '/static/nonfoil.png';
+                        if (versao.material === 'foil') caminhoIcone = '/static/foil.png';
+                        if (versao.material === 'etched') caminhoIcone = '/static/etched.png';
+
+                        infoVersoesHTML += `
+                            <div class="linha-versao">
+                                <span title="${versao.material}" style="text-transform: capitalize; display: flex; align-items: center; gap: 8px;">
+                                    <img src="${caminhoIcone}" class="icone-mini-card" alt="${versao.material}"> 
+                                    ${versao.material}:
+                                </span> 
+                                <span><strong>${versao.qnt}x</strong> ($${versao.preco})</span>
+                            </div>
+                        `;
+                    });
+
                     div.innerHTML = `
-                        <img src = ${carta.imagem} alt = ${carta.nome}>
-                        <div class="card-titulo">${carta.nome}</div>
-                        <div class="card-edicao">Edição: ${carta.edicao}</div>
-                        <div class="card-info">
-                            <strong>Qtd:</strong> ${carta.qnt}<br>
-                            <strong>Preço:</strong> $${carta.preco}<br>
-                            <strong>Acabamento:</strong> ${carta.material}
+                        <img src="${grupo.imagem}" alt="${grupo.nome}">
+                        <div class="card-titulo">${grupo.nome}</div>
+                        
+                        <div class="card-edicao" style="display: flex; align-items: center; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #333;">
+                            <img src="https://svgs.scryfall.io/sets/${grupo.edicao}.svg" title="Edição: ${grupo.edicao.toUpperCase()}" alt="${grupo.edicao}" style="width: 24px; filter: drop-shadow(1px 1px 0px #ff9900) drop-shadow(-1px -1px 0px #ff9900) drop-shadow(1px -1px 0px #ff9900) drop-shadow(-1px 1px 0px #ff9900);">
                         </div>
+                        
+                        <div class="card-info">
+                            ${infoVersoesHTML}
+                        </div>
+                        <button class="btn-deletar">
+                            ✖ Excluir Carta
+                        </button>
                     `;
+                    
+                    const btnDeletar = div.querySelector('.btn-deletar');
+                    btnDeletar.addEventListener('click', function() {
+                        abrirModal(idsParaApagar, grupo.nome);
+                    });
                     
                     grid.appendChild(div);
                 });
             })
-            .catch(erro => console.error("Erro ao buscar as cartas:", erro));
+            .catch(erro => {
+                console.error("Erro ao buscar as cartas:", erro);
+                alert("Erro ao carregar a coleção. Aperte F12 e olhe o Console!");
+            });
+        let idsAlvoDelete = [];
 
-            fetch("/static/menu.html") 
-        .then(resposta => {
-            if (!resposta.ok) {
-                throw new Error("Arquivo do menu não encontrado.");
+        function abrirModal(listaIds, nomeCarta) {
+            idsAlvoDelete = listaIds; 
+            document.getElementById('nome-carta-alvo').textContent = nomeCarta;
+            document.getElementById('senha-deletar').value = ""; 
+            document.getElementById('modal-deletar').classList.add('ativo');
+            document.getElementById('senha-deletar').focus(); 
+        }
+
+        function fecharModal() {
+            idsAlvoDelete = [];
+            document.getElementById('modal-deletar').classList.remove('ativo');
+        }
+
+        document.addEventListener('keydown', function(evento) {
+            if (evento.key === "Escape") {
+                const modal = document.getElementById('modal-deletar');
+                if (modal.classList.contains('ativo')) fecharModal();
             }
+        });
+
+        document.getElementById('btn-confirma-exclusao').addEventListener('click', function() {
+            const senhaDigitada = document.getElementById('senha-deletar').value;
+            
+            if (!senhaDigitada) {
+                mostrarAviso("Por favor, digite a senha!", "erro")
+                return;
+            }
+
+            const promessasDelete = idsAlvoDelete.map(id => {
+                const pacoteDelete = { id: id, senha: senhaDigitada };
+                
+                return fetch('/deletar', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(pacoteDelete)
+                }).then(resposta => {
+                    if (!resposta.ok) throw new Error("Senha Incorreta ou Erro no Servidor");
+                    return resposta.json();
+                });
+            });
+
+            Promise.all(promessasDelete)
+                .then(() => {
+                    fecharModal();
+                    mostrarAviso("Cartas apagadas com sucesso!")
+                    setTimeout(() => {
+                        location.reload(); 
+                    }, 1500)
+                })
+                .catch(err => {
+                    mostrarAviso(err.message, "erro")
+                });
+        });
+
+        fetch("/static/menu.html") 
+        .then(resposta => {
+            if (!resposta.ok) throw new Error("Arquivo do menu não encontrado.");
             return resposta.text();
         })
         .then(html => {
             document.getElementById("container-do-menu").innerHTML = html;
-            
             const btnMenu = document.getElementById("btn-toggle-menu");
             const corpoMenu = document.getElementById("corpo-do-menu");
             
@@ -90,5 +330,6 @@
         .catch(erro => console.log("Erro ao Carregar o Menu: ", erro));
     </script>
 
+    <script src="static/toast.js"></script>
 </body>
 </html>

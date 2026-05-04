@@ -1,11 +1,11 @@
 import sqlite3
 import os
 import json
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import FileResponse 
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from app.gerenciadorBD import lerTabela 
+from app.gerenciadorBD import lerTabela, deletarItemTabela
 from dotenv import load_dotenv
 from pydantic import BaseModel
 from app.service import adicionarNovaCarta
@@ -18,6 +18,9 @@ class NovaCarta(BaseModel):
         edicao: str
         acabamento: str
 
+class ApagarCarta(BaseModel):
+    id: int
+    senha: str
 
 load_dotenv()
 
@@ -75,6 +78,23 @@ def adicionarCarta(pacote: NovaCarta):
     adicionarNovaCarta(dictNovaCarta, catalogo)
     print(dictNovaCarta)
     return {"mensagem": f"A carta foi adicionada com sucesso"}
+
+@app.delete("/deletar")
+def apagarCarta(pacote: ApagarCarta):
+    senhaAdmin = os.getenv("SENHA_ADMIN")
+    if pacote.senha != senhaAdmin:
+        raise HTTPException(status_code=401, detail="Senha Incorreta!")
+    
+    bdNome = os.getenv("BD_CONEXAO")
+    conexao = sqlite3.connect(bdNome)
+    
+    sucesso = deletarItemTabela(conexao, "cartas", pacote.id)
+    conexao.close()
+    
+    if sucesso:
+        return {"mensagem": "Carta deletada com sucesso"}
+    else:
+        raise HTTPException(status_code=500, detail="Erro ao deletar a carta no banco.")
 
 @app.get("/buscar-foto")
 def devolverFoto(nome: str):
