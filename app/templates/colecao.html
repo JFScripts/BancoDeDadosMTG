@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minha Coleção</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #121212; color: white; padding: 20px; }
+        
+        #loading-container { margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+        #aviso-carregando { color: #ff9900; font-weight: bold; }
+        .progress-bar { width: 100%; max-width: 300px; height: 6px; background-color: #333; border-radius: 4px; overflow: hidden; position: relative; }
+        .progress-fill { position: absolute; height: 100%; background-color: #ff9900; width: 30%; border-radius: 4px; animation: loading-animation 1.5s infinite ease-in-out; }
+        @keyframes loading-animation { 0% { left: -30%; } 100% { left: 100%; } }
+
+        .controles-topo { display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto 20px auto; }
+        select, button { padding: 8px 12px; background-color: #333; color: white; border: 1px solid #555; border-radius: 5px; cursor: pointer; }
+        button:hover { background-color: #ff9900; color: #121212; font-weight: bold;}
+        button:disabled { background-color: #222; color: #555; cursor: not-allowed; }
+        .paginacao-info { font-size: 1.1em; font-weight: bold; color: #aaa; }
+
+        .fichario {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            flex-wrap: wrap; 
+        }
+
+        .pagina-fichario {
+            background-color: #1a1a1a;
+            border: 2px solid #000;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8), 0 10px 20px rgba(0,0,0,0.5);
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 10px;
+            width: 100%;
+            max-width: 550px;
+            min-height: 800px; 
+            align-content: start;
+        }
+
+        .card { 
+            background-color: #222; border: 1px solid #333; border-radius: 8px; 
+            padding: 10px; display: flex; flex-direction: column; font-size: 0.9em;
+            cursor: pointer; 
+        }
+        .card h3 { flex-grow: 1; margin: 0 0 5px 0; font-size: 1em; }
+        .card img { width: 100%; border-radius: 4.8%; margin-bottom: 8px; background-color: #111; aspect-ratio: 5/7; object-fit: cover;}
+        .card p { margin: 2px 0; }
+        
+        .carta-faltando img { filter: grayscale(100%); opacity: 0.3; }
+        .carta-faltando h3, .carta-faltando p { color: #555; }
+    </style>
+</head>
+<body>
+
+    <div id="carta-preview" style="display: none; position: fixed; pointer-events: none; z-index: 9999; transition: opacity 0.2s;">
+        <img id="img-preview" src="" style="width: 300px; border-radius: 15px; box-shadow: 0 15px 30px rgba(0,0,0,0.9);">
+    </div>
+
+    <div id="loading-container">
+        <div id="aviso-carregando">🚀 Baixando Catálogo de Cartas...</div>
+        <div class="progress-bar"><div class="progress-fill"></div></div>
+    </div>
+
+    <div class="controles-topo">
+        <div>
+            <label for="filtro-colecao">Sua Coleção:</label>
+            <select id="filtro-colecao"><option value="">Carregando...</option></select>
+        </div>
+        
+        <div class="paginacao">
+            <button id="btn-voltar">⬅ Anterior</button>
+            <span class="paginacao-info" id="info-pagina">Página 1</span>
+            <button id="btn-avancar">Próxima ➡</button>
+        </div>
+    </div>
+    
+    <div class="fichario">
+        <div class="pagina-fichario" id="pagina-esquerda"></div>
+        <div class="pagina-fichario" id="pagina-direita"></div>
+    </div>
+
+    <div id="container-do-menu" style="position: fixed; top: 20px; right: 20px;"></div>
+    
+    <script>
+        const paginaEsquerda = document.getElementById("pagina-esquerda");
+        const paginaDireita = document.getElementById("pagina-direita");
+        const selectDropdown = document.getElementById("filtro-colecao");
+        const avisoContainer = document.getElementById("loading-container");
+        const btnVoltar = document.getElementById("btn-voltar");
+        const btnAvancar = document.getElementById("btn-avancar");
+        const infoPagina = document.getElementById("info-pagina");
+        
+        let dictEdicoes = {};
+        let minhasCartas = [];
+        let catalogoCompleto = [];
+        
+        let listaExibicaoAtual = []; 
+        let paginaAtual = 0;
+        const itensPorPagina = 18; 
+
+        selectDropdown.addEventListener("change", function() {
+            filtrarEPrepararCartas(this.value);
+        });
+
+        btnVoltar.addEventListener("click", () => {
+            if (paginaAtual > 0) {
+                paginaAtual--;
+                desenharPaginasDoFichario();
+            }
+        });
+
+        btnAvancar.addEventListener("click", () => {
+            if ((paginaAtual + 1) * itensPorPagina < listaExibicaoAtual.length) {
+                paginaAtual++;
+                desenharPaginasDoFichario();
+            }
+        });
+
+        function renderizarDropdown() {
+            const edicoesQueEuTenho = [...new Set(minhasCartas.map(c => c.edicao))];
+            selectDropdown.innerHTML = ""; 
+            
+            edicoesQueEuTenho.forEach(sigla => {
+                const nome = dictEdicoes[sigla] ? dictEdicoes[sigla].nome : sigla;
+                selectDropdown.innerHTML += `<option value="${sigla}">${nome}</option>`;
+            });
+            
+            if(edicoesQueEuTenho.length > 0) filtrarEPrepararCartas(edicoesQueEuTenho[0]);
+        }
+
+        function filtrarEPrepararCartas(colecaoEscolhida) {
+            if (!colecaoEscolhida) return;
+
+            const infoEdicao = dictEdicoes[colecaoEscolhida] || { qntCartas: "?" };
+            const cartasDoCatalogo = catalogoCompleto.filter(c => c.edicao == colecaoEscolhida);
+            const listaBase = cartasDoCatalogo.length > 0 ? cartasDoCatalogo : minhasCartas.filter(c => c.edicao == colecaoEscolhida);
+
+            listaBase.sort((a, b) => {
+                return String(a.numeroColecao).localeCompare(String(b.numeroColecao), undefined, {numeric: true});
+            });
+
+            listaExibicaoAtual = listaBase.map(item => {
+                const euTenho = minhasCartas.find(m => m.numeroColecao == item.numeroColecao && m.edicao == item.edicao);
+                const carta = euTenho || item; 
+                const classeFaltando = euTenho ? "" : "carta-faltando";
+                const precoDisplay = euTenho ? `R$ ${carta.preco}` : "---";
+
+                return `
+                    <div class="card ${classeFaltando}"
+                         onmouseenter="mostrarPreview('${carta.imagem}')" 
+                         onmouseleave="esconderPreview()" 
+                         onmousemove="moverPreview(event)">
+                         
+                        <img src="${carta.imagem}" alt="${carta.nome}" onerror="this.src='https://placehold.co/250x350?text=Sem+Imagem'">
+                        <h3>${carta.nome}</h3>
+                        <p>Preço: <strong>${precoDisplay}</strong></p>
+                        <p>${carta.numeroColecao} / ${infoEdicao.qntCartas}</p>
+                    </div>
+                `;
+            });
+
+            paginaAtual = 0; 
+            desenharPaginasDoFichario();
+        }
+
+        function desenharPaginasDoFichario() {
+            paginaEsquerda.innerHTML = "";
+            paginaDireita.innerHTML = "";
+
+            const indiceInicio = paginaAtual * itensPorPagina;
+            const indiceMeio = indiceInicio + 9;
+            const indiceFim = indiceInicio + 18;
+
+            const cartasEsquerda = listaExibicaoAtual.slice(indiceInicio, indiceMeio);
+            const cartasDireita = listaExibicaoAtual.slice(indiceMeio, indiceFim);
+
+            paginaEsquerda.innerHTML = cartasEsquerda.join("");
+            paginaDireita.innerHTML = cartasDireita.join("");
+
+            const totalPaginas = Math.ceil(listaExibicaoAtual.length / itensPorPagina) || 1;
+            infoPagina.innerText = `Página ${paginaAtual + 1} de ${totalPaginas}`;
+            
+            btnVoltar.disabled = paginaAtual === 0;
+            btnAvancar.disabled = (paginaAtual + 1) >= totalPaginas;
+        }
+
+        const previewEl = document.getElementById("carta-preview");
+        const previewImg = document.getElementById("img-preview");
+
+        function mostrarPreview(urlImagem) {
+            previewImg.src = urlImagem; 
+            previewEl.style.display = "block"; 
+        }
+
+        function esconderPreview() {
+            previewEl.style.display = "none"; 
+        }
+
+        function moverPreview(event) {
+            let x = event.clientX + 20; 
+            let y = event.clientY - 150; 
+
+            if (x + 320 > window.innerWidth) x = event.clientX - 320; 
+            if (y + 450 > window.innerHeight) y = window.innerHeight - 450; 
+            if (y < 10) y = 10;
+
+            previewEl.style.left = x + "px";
+            previewEl.style.top = y + "px";
+        }
+
+        Promise.all([
+            fetch("/edicoes").then(r => r.json()),
+            fetch("/cartas?ordenar=true").then(r => r.json())
+        ])
+        .then(([edicoes, cartas]) => {
+            dictEdicoes = edicoes;
+            minhasCartas = cartas.colecao;
+            renderizarDropdown(); 
+            return fetch("/static/Catalogo.json");
+        })
+        .then(r => {
+            if (!r.ok) throw new Error("Arquivo Catalogo.json não encontrado!");
+            return r.json();
+        })
+        .then(dados => {
+            catalogoCompleto = []; 
+            for (const nomeDaCarta in dados) {
+                const variacoes = dados[nomeDaCarta]; 
+                variacoes.forEach(carta => {
+                    carta.nome = nomeDaCarta; 
+                    catalogoCompleto.push(carta); 
+                });
+            }
+
+            avisoContainer.style.display = "none"; 
+            if(selectDropdown.value) filtrarEPrepararCartas(selectDropdown.value);
+        })
+        .catch(err => {
+            console.error(err);
+            document.getElementById("aviso-carregando").innerText = "Erro ao baixar catálogo.";
+            document.querySelector(".progress-bar").style.display = "none";
+        });
+
+    </script>
+</body>
+</html>

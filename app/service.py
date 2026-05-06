@@ -31,6 +31,7 @@ def adicionarNovaCarta(pacote, catalogo):
                 preco = versao["precos"][acabamento]
                 cor = versao["cor"]
                 imagem = versao["imagem"]
+                numeroColecao = versao["numeroColecao"]
                 break
         dictNovaCarta = {
             "idScryfall": idScryfall,
@@ -40,7 +41,8 @@ def adicionarNovaCarta(pacote, catalogo):
             "preco": preco,
             "material": acabamento,
             "cor": cor,
-            "imagem": imagem
+            "imagem": imagem,
+            "numeroColecao" : numeroColecao
         }
 
         adicionarValorTabela(conexao, "cartas", dictNovaCarta)

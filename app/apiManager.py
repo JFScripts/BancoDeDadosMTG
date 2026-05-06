@@ -67,6 +67,7 @@ def carregarCatalogo(dataBase, catalogoNome, precisaLimpar):
         edicao = carta["set"]
         idScryfall = carta["id"]
         cor = "".join(carta["color_identity"])
+        numeroColecao = carta["collector_number"]
 
         precos = carta["prices"]
         dictPrecos = {
@@ -88,7 +89,8 @@ def carregarCatalogo(dataBase, catalogoNome, precisaLimpar):
         "cor": cor, 
         "acabamento": acabamentos,
         "precos": dictPrecos,
-        "imagem": imagem})
+        "imagem": imagem,
+        "numeroColecao": numeroColecao})
 
     with open(catalogoNome, "w", encoding="utf-8") as arquivo:
         json.dump(catalogo, arquivo, ensure_ascii=False, indent=4)

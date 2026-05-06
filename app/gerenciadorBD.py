@@ -13,7 +13,8 @@ def criarColecao(dataBase):
         preco REAL,
         material TEXT,
         cor TEXT,
-        imagem TEXT
+        imagem TEXT,
+        numeroColecao TEXT
     )""")
     conexao.commit()
     conexao.close()
@@ -35,7 +36,7 @@ def adicionarValorTabela(con, nomeTabela, dictTabela):
         print(f"Erro na Função {nomeFuncao}: {e}")
         return False
 
-def lerTabela(con, nomeTabela, filtro=None):
+def lerTabela(con, nomeTabela, filtro=None, ordem=None):
     try:
         con.execute("PRAGMA foreign_keys = ON")
         con.row_factory = sqlite3.Row
@@ -47,6 +48,10 @@ def lerTabela(con, nomeTabela, filtro=None):
             condicao = " AND ".join(listaCondicoes)
             query = query + " WHERE " + condicao
             valores = tuple(filtro.values())
+
+        if ordem:
+            query = query + f" ORDER BY {ordem}"
+        print(query)
         cur.execute(query, valores)
         resultadoBruto = cur.fetchall()
         listaFinal = [dict(linha) for linha in resultadoBruto]

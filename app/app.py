@@ -1,11 +1,13 @@
 import sqlite3
 import os
 import json
+
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import FileResponse 
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from app.gerenciadorBD import lerTabela, deletarItemTabela
+from app.apiManager import baixarEdicoes
 from dotenv import load_dotenv
 from pydantic import BaseModel
 from app.service import adicionarNovaCarta
@@ -28,6 +30,8 @@ load_dotenv()
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="app/static"),name="static")
 templates = Jinja2Templates(directory="app\\templates")
+urlEdicoes = "https://api.scryfall.com/sets"
+
 
 with open("Catalogo.json", "r", encoding="utf-8") as arquivo:
                 catalogo = json.load(arquivo)
@@ -47,14 +51,21 @@ def home(request: Request):
     )
 
 @app.get("/cartas")
-def listar_todas_as_cartas():
+def listar_todas_as_cartas(ordenar: bool = False):
 
     conexao = sqlite3.connect("colecao.db")
     
-    minhasCartas = lerTabela(conexao, "cartas")
-    conexao.close()
+    if not ordenar:
+        minhasCartas = lerTabela(conexao, "cartas")
+    else:
+        minhasCartas = lerTabela(conexao, "cartas", ordem="edicao ASC, numeroColecao ASC")
     
+    conexao.close()
     return {"total": len(minhasCartas), "colecao": minhasCartas}
+
+@app.get("/edicoes")
+def listarTodasAsEdicoes():
+    return allEdicoes
 
 @app.get("/adicionar")
 def mostrarAdicionarCarta(request: Request):
@@ -96,6 +107,17 @@ def apagarCarta(pacote: ApagarCarta):
         return {"mensagem": "Carta deletada com sucesso"}
     else:
         raise HTTPException(status_code=500, detail="Erro ao deletar a carta no banco.")
+
+@app.get("/colecao")
+def colecao(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="colecao.html",
+        context={
+            "request": request,
+            "titulo": "Coleção"
+        }
+    )
 
 @app.get("/buscar-foto")
 def devolverFoto(nome: str):
