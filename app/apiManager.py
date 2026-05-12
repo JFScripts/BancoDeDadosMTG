@@ -3,6 +3,26 @@ import json
 import datetime
 import os
 
+
+def baixarBancoScryfall(urlScryfall, cartasJsonNome):
+    pedido = requests.get(urlScryfall)
+    dados = pedido.json()
+    linkDownload = dados["download_uri"]
+    tamanhoTotal = int(dados["size"])
+    header = {"user-Agent": "colecaoMTG"}
+    download = requests.get(linkDownload, headers=header,stream = True)
+    tamanhoAtual = 0
+
+    with open(cartasJsonNome, "wb") as arquivo:
+        for parte in download.iter_content(chunk_size=8192):
+            arquivo.write(parte)
+            tamanhoAtual += len(parte)
+            porcentagem = (tamanhoAtual/tamanhoTotal) * 100
+            print(f"Baixando: {porcentagem:.2f}%", end="\r")
+        print()
+        print("Download Concluido")
+
+
 def inicializarCatalogo(url, dbNome,maxDias):
     precisaLimpar = False
     if os.path.exists(dbNome):
