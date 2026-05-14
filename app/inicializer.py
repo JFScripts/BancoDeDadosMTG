@@ -6,12 +6,13 @@ import logManager
 
 from dotenv import load_dotenv
 from pathlib import Path
-from apiManager import baixarBancoScryfall
+from apiManager import baixarBancoScryfall, pegarCotacaoDollar, inicializarEdicoes
 from metadadosManager import atualizarDataDownloadMetadados, getDataDownloadMetadados
 
 
-def configurarPrograma(urlScryfall, maxDias):
-    cartasJson = "data/raw/todasAsCartas.json"
+def configurarPrograma(maxDias):
+    bulkdataPath = "data/raw/bulkdata.json"
+    edicoesPath = "data/raw/edicoes.json"
     criarPastas()
     logManager.manutencaoLogs()
 
@@ -22,16 +23,24 @@ def configurarPrograma(urlScryfall, maxDias):
     diferencaMs = agoraMs - getDataDownloadMetadados()
     maxMs = maxDias * 24 * 60 * 60 * 1000
 
-    if diferencaMs >= maxMs or not os.path.exists(cartasJson):
-       baixarBancoScryfall(urlScryfall, cartasJson)
-       atualizarDataDownloadMetadados()
+    bulkdataExiste = os.path.exists(bulkdataPath)
+    edicoesExiste = os.path.exists(edicoesPath)
+    precisaAtualizarTudo = (diferencaMs >= maxMs)
+
+    if  precisaAtualizarTudo or not bulkdataExiste:
+        logManager.logMensagemAviso("Bulkdata Muito Antigo ou Inexistente. Atualizando Ele")
+        baixarBancoScryfall(bulkdataPath, bulkdataExiste)
+        atualizarDataDownloadMetadados()
+        logManager.logMensagemSucesso("Bulkdata Atualizada ou Criada Com Sucesso")
+    if precisaAtualizarTudo or not edicoesExiste:
+        inicializarEdicoes(edicoesPath, edicoesExiste)
+    pegarCotacaoDollar()
 
 def criarPastas():
     logManager.logMensagemInfo("Tentando Criar as Pastas")
     try:
         Path("data/raw").mkdir(parents=True, exist_ok=True)
         Path("data/db").mkdir(parents=True, exist_ok=True)
-        Path("logs").mkdir(parents=True, exist_ok=True)
         Path("logs/new").mkdir(parents=True, exist_ok=True)
         Path("logs/old").mkdir(parents=True, exist_ok=True)
         Path("configs").mkdir(parents=True, exist_ok=True)
@@ -64,20 +73,43 @@ def criarEnv():
 
 def inicializarMetadados():
     metaDados = {
-        "ultimoDownloadScryfall" : "2000-01-01T00:00:00"
+        "ultimoDownloadScryfall" : "2000-01-01T00:00:00",
+        "tamanhoDownloadScryfall" : 0,
+        "cotacaoDollar" : 0
     }
+    caminho = "configs/metadados.json"
     logManager.logMensagemInfo("Tentando criar os MetaDados")
     try:
         if not os.path.exists("configs/metadados.json"):
-            with open("configs/metadados.json", "w", encoding="utf-8") as arquivo:
+            with open(caminho, "w", encoding="utf-8") as arquivo:
                 json.dump(metaDados, arquivo, indent=4)
             logManager.logMensagemSucesso("Arquivos de Metadados criado com sucesso")
         else:
-            logManager.logMensagemInfo("Arquivos Metadados Já Existem")
+            logManager.logMensagemInfo("Arquivos Metadados Já Existem. Verificando A Validação de Estado")
+            try:
+                with open(caminho, "r", encoding="utf-8") as arquivo:
+                    metadadosCarregados = json.load(arquivo)
+                logManager.logMensagemSucesso("Arquivos de Metadados Carregado com Sucesso")
+                diferenca = metaDados.keys() - metadadosCarregados.keys()
+                if not diferenca:
+                    return
+                for chave in diferenca:
+                    metadadosCarregados[chave] = metaDados[chave]
+                logManager.logMensagemInfo("Os Metadados Estão Desatualizando, tentando atualiza-los")
+                try:
+                    with open(caminho, "w", encoding="utf-8") as arquivo:
+                        json.dump(metadadosCarregados, arquivo, indent=4)
+                    logManager.logMensagemSucesso("Metadados Atualizados Com Sucesso")
+                except Exception as e:
+                    logManager.logMensagemFatal(f"Falha Crítica. Os Metadados Estão Desatualizados e Não Foi Possível Atualiza-los: {e}")
+                    sys.exit("Erro Crítico na Atualização dos Metadados. Verifique os logs")
+            except Exception as e:
+                logManager.logMensagemFatal(f"Falha Critica. Não foi possivel ler os Metadados: {e}")
+                sys.exit("Erro Crítico na Leitura dos Metadados. Verifique os logs")
     except Exception as e:
         logManager.logMensagemFatal(f"Falha ao criar metadados. O programa não pode continuar: {e}")
         sys.exit("Erro crítico na inicialização. Verifique os logs.")
 
 
 if __name__ == "__main__":
-    configurarPrograma("https://api.scryfall.com/bulk-data/default-cards", 15)
+    configurarPrograma(15)

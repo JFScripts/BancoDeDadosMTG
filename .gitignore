@@ -1,5 +1,9 @@
 /app/__pycache__
+/configs
+/data
+/logs
 .env
 *.json
 *.db
 .venv
+temp.py

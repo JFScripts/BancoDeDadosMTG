@@ -2,126 +2,101 @@ import requests
 import json
 import datetime
 import os
+import logManager
+import sys
+
+from metadadosManager import atualizarTamanhoDownload, atualizarCotacaoDollar, getCotacaoDollar
 
 
-def baixarBancoScryfall(urlScryfall, cartasJsonNome):
-    pedido = requests.get(urlScryfall)
-    dados = pedido.json()
-    linkDownload = dados["download_uri"]
-    tamanhoTotal = int(dados["size"])
+def baixarBancoScryfall(cartasJsonNome, jaExisteJSON):
+    urlScryfall = "https://api.scryfall.com/bulk-data/default-cards"
+    tentativas = [10, 5, 2] #Em segundos
     header = {"user-Agent": "colecaoMTG"}
-    download = requests.get(linkDownload, headers=header,stream = True)
-    tamanhoAtual = 0
-
-    with open(cartasJsonNome, "wb") as arquivo:
-        for parte in download.iter_content(chunk_size=8192):
-            arquivo.write(parte)
-            tamanhoAtual += len(parte)
-            porcentagem = (tamanhoAtual/tamanhoTotal) * 100
-            print(f"Baixando: {porcentagem:.2f}%", end="\r")
-        print()
-        print("Download Concluido")
-
-
-def inicializarCatalogo(url, dbNome,maxDias):
-    precisaLimpar = False
-    if os.path.exists(dbNome):
-        ultimaModificacao = os.path.getmtime(dbNome)
-        ultimaModificacao = datetime.datetime.fromtimestamp(ultimaModificacao)
-        tempoAtual = datetime.datetime.now()
-        diferencaDias = tempoAtual - ultimaModificacao
-
-        if diferencaDias.days >= maxDias:
-            baixarDB(url, dbNome)
-            precisaLimpar = True
-    else: 
-        baixarDB(url, dbNome)
-        precisaLimpar = True
-    
-    return carregarCatalogo(dbNome, "Catalogo.json", precisaLimpar)
-        
-
-def baixarDB(url, dbNome):
-    request = requests.get(url)
-    dados = request.json()
-    linkDownload = dados["download_uri"]
-    tamanhoTotal = int(dados["size"])
-    header = {"user-Agent": "colecaoMTG"}
-    download = requests.get(linkDownload, headers=header,stream = True)
-    tamanhoAtual = 0
-
-    with open(dbNome, "wb") as arquivo:
-        for parte in download.iter_content(chunk_size=8192):
-            arquivo.write(parte)
-            tamanhoAtual += len(parte)
-            porcentagem = (tamanhoAtual/tamanhoTotal) * 100
-            print(f"Baixando: {porcentagem:.2f}%", end="\r")
-        print()
-        print("Download Concluido")
-
-def carregarCatalogo(dataBase, catalogoNome, precisaLimpar):
-    catalogo = {}
-    if not precisaLimpar and os.path.exists(catalogoNome):
-        try:
-            with open(catalogoNome, "r", encoding="utf-8") as arquivo:
-                catalogo = json.load(arquivo)
-            return catalogo
-        except json.JSONDecodeError:
-            print(f"\nAviso: O arquivo {catalogoNome} está corrompido/vazio.Recriando")
-            precisaLimpar = True
+    logManager.logMensagemInfo("Tentando Baixar A API do Scryfall")
     try:
-        with open(dataBase, "r", encoding="utf-8", errors="ignore") as arquivo:
-            dadosBrutos = json.load(arquivo)
-    except json.JSONDecodeError:
-        print(f"\nERRO CRITICO: O arquivo {catalogoNome} está corrompido/vazio. Apague o arquivo e tente novamente\n")
-        input("Pressione ENTER para continuar")
-        return {}
-
-    for carta in dadosBrutos:
-        if carta["digital"]:
-            continue
-        cartaNome = carta["name"].lower()
-
-        if cartaNome not in catalogo:
-            catalogo[cartaNome] = []
-        edicao = carta["set"]
-        idScryfall = carta["id"]
-        cor = "".join(carta["color_identity"])
-        numeroColecao = carta["collector_number"]
-
-        precos = carta["prices"]
-        dictPrecos = {
-            "nonfoil": float(precos.get("usd") or 0.0),
-            "foil": float(precos.get("usd_foil") or 0.0),
-            "etched": float(precos.get("usd_etched") or 0.0)
-        }
-
-        acabamentos = carta["finishes"]
-        if "image_uris" in carta:
-            imagem = carta["image_uris"]["normal"]
-        elif "card_faces" in carta and "image_uris" in carta["card_faces"][0]:
-            imagem = carta["card_faces"][0]["image_uris"]["normal"]
+        for segundos in tentativas:
+            try:
+                pedido = requests.get(urlScryfall, timeout=segundos,headers=header)
+                if pedido.status_code == 200:
+                    logManager.logMensagemSucesso("O Scryfall Respondeu Com Sucesso")
+                    break
+            except requests.exceptions.Timeout:
+                logManager.logMensagemAviso(f"O Scryfall demorou mais de {segundos} segundos para responder, tentando novamente")
+            except requests.exceptions.RequestException as e:
+                logManager.logMensagemFatal(f"Erro Crítico de Conexão: {e}")
+                sys.exit("Erro Fatal de Rede. Olhe o log para mais informação")
         else:
-            imagem = ""
+            if jaExisteJSON:
+                logManager.logMensagemAviso("Não Foi Possível Baixar Os Dados. Será Utilizado Dados Antigos")
+                return
+            else:
+                logManager.logMensagemFatal(f"Não Foi Possível Baixar OS Dados. O Scryfall Demorou Demais Para Responder, Verifique a Conexão com a Internet e Tente Novamente")
+                sys.exit("Erro Fatal. Verifique Os Logs")
 
-        catalogo[cartaNome].append({"edicao": edicao, 
-        "idScryfall": idScryfall, 
-        "cor": cor, 
-        "acabamento": acabamentos,
-        "precos": dictPrecos,
-        "imagem": imagem,
-        "numeroColecao": numeroColecao})
+        dados = pedido.json()
+        linkDownload = dados["download_uri"]
+        tamanhoTotal = int(dados["size"])
+        atualizarTamanhoDownload(tamanhoTotal)
 
-    with open(catalogoNome, "w", encoding="utf-8") as arquivo:
-        json.dump(catalogo, arquivo, ensure_ascii=False, indent=4)
-    return catalogo
+        tamanhoAtual = 0
+        logManager.logMensagemInfo("Tentando Baixar O Bulkdata")
+        for segundos in tentativas:
+            try:
+                bulkdata = requests.get(linkDownload, headers=header, stream = True, timeout=segundos)
+                if bulkdata.status_code == 200:
+                    logManager.logMensagemSucesso("O Bulkdata Foi Baixado Com Sucesso")
+                    break
+            except requests.exceptions.Timeout:
+                logManager.logMensagemAviso(f"O Scryfall demorou mais de {segundos} segundos para responder, tentando novamente")
+            except requests.exceptions.RequestException as e:
+                logManager.logMensagemFatal(f"Erro Crítico de Conexão: {e}")
+                sys.exit("Erro Fatal de Rede. Olhe o log para mais informação")
+        else:
+            logManager.logMensagemFatal(f"Não Foi Possível Baixar O Bulkdata. O Scryfall Demorou Demais Para Responder, Verifique a Conexão com a Internet e Tente Novamente")
+            sys.exit("Erro Fatal. Verifique Os Logs")
 
-def baixarEdicoes(setJson, url):
-    if not os.path.exists(setJson):
-        request = requests.get(url)
-        edicaoBruta = request.json()["data"]
-        dictEdicao = {}
+        logManager.logMensagemInfo("Tentando Salvar No HD O Bulkdata")
+        try:
+            with open(cartasJsonNome, "wb") as arquivo:
+                for parte in bulkdata.iter_content(chunk_size=8192):
+                    arquivo.write(parte)
+                    tamanhoAtual += len(parte)
+                    porcentagem = (tamanhoAtual/tamanhoTotal) * 100
+                    print(f"Baixando: {porcentagem:.2f}%", end="\r")
+                print("Download Concluido")
+            logManager.logMensagemSucesso("Bulkdata Salvo No HD com Sucesso")
+        except Exception as e:
+            logManager.logMensagemFatal(f"Erro Na Hora de Salvar O Bulkdata No HD: {e}")
+            sys.exit("Erro Fatal. Não Foi Possivel Salvar O Bulkdata. Verifique O Log")
+    except Exception as e:
+        logManager.logMensagemFatal(f"Erro Na Hora de Baixar os Dados da API do Scryfall: {e}")
+        sys.exit("Erro Crítico Para Baixar Os Dados da API do Scryfall. Abra o LOG para ver")
 
+def inicializarEdicoes(path, jaExisteJSON):
+    header = {"user-Agent": "colecaoMTG"}
+    url = "https://api.scryfall.com/sets"
+    tentativas = [10, 5, 2]
+    dictEdicao = {}
+    logManager.logMensagemInfo("Tentando Baixar As Edições")
+    try:
+        for segundos in tentativas:
+            try:
+                pedido = requests.get(url, timeout=segundos, headers=header)
+                if pedido.status_code == 200:
+                    logManager.logMensagemSucesso("As Edições Foram Baixadas Com Sucesso")
+                    edicaoBruta = pedido.json()["data"]
+                    break
+            except requests.exceptions.Timeout:
+                logManager.logMensagemAviso(f"O Scryfall demorou mais de {segundos} segundos para responder, tentando novamente")
+            except requests.exceptions.RequestException as e:
+                logManager.logMensagemFatal(f"Erro Crítico de Conexão: {e}")
+                sys.exit("Erro Fatal de Rede. Olhe o log para mais informação")
+        else:
+            if jaExisteJSON:
+                logManager.logMensagemAviso("Não Foi Possível Se Comunicar Com O Scryfall Então Será Utilizado Dados Antigos")
+                return
+            logManager.logMensagemFatal("Não Foi Possível Se Comunicar Com O Scryfall. Verifique Sua Internet E Tente Novamente")
+            sys.exit("Erro Crítico Na Comunicação Com O Scryfall. Olhe Os Logs")
         for edicao in edicaoBruta:
             if not edicao["digital"] and edicao["set_type"] != "token":
                 idScryfall = edicao["id"]
@@ -130,20 +105,38 @@ def baixarEdicoes(setJson, url):
                 qntCartas = edicao["card_count"]
                 icone = edicao["icon_svg_uri"]
                 dictEdicao[codigo] = {"id":idScryfall, "nome":nome, "qntCartas":qntCartas, "icone": icone}
-
-        with open(setJson, "w", encoding="utf-8") as arquivo:
-            json.dump(dictEdicao, arquivo, ensure_ascii=False, indent=4)
-        return dictEdicao
-
-    with open(setJson, "r", encoding="utf-8") as arquivo:
-        return json.load(arquivo)
-
-
-def pegarCotacaoDollar(url):
-    try:
-        resposta = requests.get(url, timeout=5)
-        dados = resposta.json()
-        valor = float(dados["USDBRL"]["bid"])
-        return valor
     except Exception as e:
-        return 5.00
+        logManager.logMensagemFatal(f"Não Foi Possível Fazer O Download Das Edições: {e}")
+        sys.exit("Erro Crítico Na Hora De Baixar As Edições. Verifique Os Logs")
+    logManager.logMensagemInfo("Tentando Salvar As Edições No HD")
+    try:
+        with open(path, "w", encoding="utf-8") as arquivo:
+            json.dump(dictEdicao, arquivo, ensure_ascii=False, indent=4)
+        logManager.logMensagemSucesso("Edições Salvas Com Sucesso")
+    except Exception as e:
+        logManager.logMensagemFatal(f"Não Foi Possível Salvar As Edições No HD: {e}")
+        sys.exit("Erro Crítico Na Hora De Salvar As Edições No HD. Verifique O Log")
+
+def pegarCotacaoDollar():
+    url = "https://economia.awesomeapi.com.br/json/last/USD-BRL"
+    tentativas = [10, 5, 2]
+    valor = getCotacaoDollar()
+    logManager.logMensagemInfo("Tentando Baixar A Cotação Do Dollar")
+    try:
+        for segundos in tentativas:
+            try:
+                resposta = requests.get(url, timeout=segundos)
+                if resposta.status_code == 200:
+                    dados = resposta.json()
+                    valor = float(dados["USDBRL"]["bid"])
+                    logManager.logMensagemSucesso("Cotação Do Dollar Obtida Com Sucesso")
+                    atualizarCotacaoDollar(valor)
+                    break
+            except requests.exceptions.Timeout:
+                logManager.logMensagemAviso(f"O Awesomeapi demorou mais de {segundos} segundos para responder, tentando novamente")
+            except requests.exceptions.RequestException as e:
+                logManager.logMensagemFatal(f"Erro Crítico de Conexão: {e}")
+        else:
+            logManager.logMensagemAviso(f"Não Foi Possível Estabelecer O Valor Do Dollar. Será Usado o Valor de {valor}")
+    except Exception as e:
+        logManager.logMensagemErro(f"Não Foi Possível Atualizar O Valor Do Dollar, Será Usado O Valor Salvo: {e}")
