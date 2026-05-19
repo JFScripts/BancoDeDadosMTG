@@ -101,5 +101,15 @@ def logMensagemFatal(mensagem="Isso é uma mensagem fatal"):
     mensagemFatal = f"{_getTime()} | [FATAL] -> {mensagem}.\n"
     _registrarLog(mensagemFatal)
 
+def logNovaSessao():
+    tempoAtual = _getTime()
+    separador = f"\n{'='*60}\n"
+    cabecalho = f"  INICIO DE UMA NOVA SESSÃO: {tempoAtual}  \n"
+    rodape = f"{'='*60}\n\n"
+
+    mensagemFinal = separador + cabecalho + rodape
+    _registrarLog(mensagemFinal)
+
+
 if __name__ == "__main__":
     manutencaoLogs()

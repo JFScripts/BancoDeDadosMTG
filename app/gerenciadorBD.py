@@ -1,23 +1,15 @@
 import sqlite3
 import inspect
 
-def criarColecao(dataBase):
-    conexao = sqlite3.connect(dataBase)
-    cursor = conexao.cursor()
-    cursor.execute("""CREATE TABLE IF NOT EXISTS cartas (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        idScryfall TEXT,
-        nome TEXT,
-        edicao TEXT,
-        qnt INTEGER,
-        preco REAL,
-        material TEXT,
-        cor TEXT,
-        imagem TEXT,
-        numeroColecao TEXT
-    )""")
-    conexao.commit()
-    conexao.close()
+def criarTabelas(conexao, querySQL):
+    try:
+        conexao.execute("PRAGMA foreign_keys = ON")
+        cursor = conexao.cursor()
+        cursor.execute(querySQL)
+        conexao.commit()
+        return True, None
+    except Exception as e:
+        return False, e
 
 def adicionarValorTabela(con, nomeTabela, dictTabela):
     try:

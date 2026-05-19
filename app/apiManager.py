@@ -4,47 +4,25 @@ import datetime
 import os
 import logManager
 import sys
-
+import time
 from metadadosManager import atualizarTamanhoDownload, atualizarCotacaoDollar, getCotacaoDollar
 
-
-def baixarBancoScryfall(cartasJsonNome, jaExisteJSON):
-    urlScryfall = "https://api.scryfall.com/bulk-data/default-cards"
+def baixarMTGJson(cartasJsonNome, jaExisteJSON):
+    urlMTGJson = "https://mtgjson.com/api/v5/AllPrintings.json"
     tentativas = [10, 5, 2] #Em segundos
     header = {"user-Agent": "colecaoMTG"}
+    #Para cada tentativa que falhou em obter resposta tentamos novamente mas cada vez em um tempo menor
     logManager.logMensagemInfo("Tentando Baixar A API do Scryfall")
     try:
-        for segundos in tentativas:
-            try:
-                pedido = requests.get(urlScryfall, timeout=segundos,headers=header)
-                if pedido.status_code == 200:
-                    logManager.logMensagemSucesso("O Scryfall Respondeu Com Sucesso")
-                    break
-            except requests.exceptions.Timeout:
-                logManager.logMensagemAviso(f"O Scryfall demorou mais de {segundos} segundos para responder, tentando novamente")
-            except requests.exceptions.RequestException as e:
-                logManager.logMensagemFatal(f"Erro Crítico de Conexão: {e}")
-                sys.exit("Erro Fatal de Rede. Olhe o log para mais informação")
-        else:
-            if jaExisteJSON:
-                logManager.logMensagemAviso("Não Foi Possível Baixar Os Dados. Será Utilizado Dados Antigos")
-                return
-            else:
-                logManager.logMensagemFatal(f"Não Foi Possível Baixar OS Dados. O Scryfall Demorou Demais Para Responder, Verifique a Conexão com a Internet e Tente Novamente")
-                sys.exit("Erro Fatal. Verifique Os Logs")
-
-        dados = pedido.json()
-        linkDownload = dados["download_uri"]
-        tamanhoTotal = int(dados["size"])
-        atualizarTamanhoDownload(tamanhoTotal)
-
         tamanhoAtual = 0
         logManager.logMensagemInfo("Tentando Baixar O Bulkdata")
         for segundos in tentativas:
             try:
-                bulkdata = requests.get(linkDownload, headers=header, stream = True, timeout=segundos)
-                if bulkdata.status_code == 200:
+                resposta = requests.get(urlMTGJson, headers=header, stream = True, timeout=segundos)
+                if resposta.status_code == 200:
                     logManager.logMensagemSucesso("O Bulkdata Foi Baixado Com Sucesso")
+                    tamanhoTotal = int(resposta.headers.get("Content-Length", 0))
+                    atualizarTamanhoDownload(tamanhoTotal)
                     break
             except requests.exceptions.Timeout:
                 logManager.logMensagemAviso(f"O Scryfall demorou mais de {segundos} segundos para responder, tentando novamente")
@@ -58,11 +36,15 @@ def baixarBancoScryfall(cartasJsonNome, jaExisteJSON):
         logManager.logMensagemInfo("Tentando Salvar No HD O Bulkdata")
         try:
             with open(cartasJsonNome, "wb") as arquivo:
-                for parte in bulkdata.iter_content(chunk_size=8192):
+                for parte in resposta.iter_content(chunk_size=(1024 * 1024)):
                     arquivo.write(parte)
                     tamanhoAtual += len(parte)
-                    porcentagem = (tamanhoAtual/tamanhoTotal) * 100
-                    print(f"Baixando: {porcentagem:.2f}%", end="\r")
+                    if tamanhoTotal > 0:
+                        porcentagem = (tamanhoAtual/tamanhoTotal) * 100
+                        print(f"Baixando: {porcentagem:.2f}%", end="\r")
+                    else:
+                        print(f"Baixando... {tamanhoAtual / (1024*1024):.2f} MB", end="\r")
+                atualizarTamanhoDownload(tamanhoAtual)
                 print("Download Concluido")
             logManager.logMensagemSucesso("Bulkdata Salvo No HD com Sucesso")
         except Exception as e:
@@ -72,7 +54,33 @@ def baixarBancoScryfall(cartasJsonNome, jaExisteJSON):
         logManager.logMensagemFatal(f"Erro Na Hora de Baixar os Dados da API do Scryfall: {e}")
         sys.exit("Erro Crítico Para Baixar Os Dados da API do Scryfall. Abra o LOG para ver")
 
+def baixarCartasPT():
+    url = "https://api.scryfall.com/cards/search?q=lang:pt"
+    path = "data/raw/cartasPT.json"
+    pedido = requests.get(url)
+    dados = pedido.json()
+    dictCartasPT = {}
+    curPagina = 0
+    while True:
+        cartasPagina = dados.get("data")
+        totalCartas = dados.get("total_cards")
+        for carta in cartasPagina:
+            dictCartasPT[carta["id"]] = carta.get("printed_name")
+        with open(path, "w", encoding="utf-8") as arquivo:
+            json.dump(dictCartasPT, arquivo,ensure_ascii=False, indent=4)
+            print(f"Pagina {curPagina} Salva")
+        if dados.get("has_more") == True and dados.get("next_page"):
+            url = dados["next_page"]
+            time.sleep(0.2)
+            pedido = requests.get(url)
+            dados = pedido.json()
+        else:
+            break
+        
+
+
 def inicializarEdicoes(path, jaExisteJSON):
+
     header = {"user-Agent": "colecaoMTG"}
     url = "https://api.scryfall.com/sets"
     tentativas = [10, 5, 2]
@@ -140,3 +148,7 @@ def pegarCotacaoDollar():
             logManager.logMensagemAviso(f"Não Foi Possível Estabelecer O Valor Do Dollar. Será Usado o Valor de {valor}")
     except Exception as e:
         logManager.logMensagemErro(f"Não Foi Possível Atualizar O Valor Do Dollar, Será Usado O Valor Salvo: {e}")
+
+
+if __name__ == "__main__":
+    baixarCartasPT()

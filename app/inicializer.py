@@ -3,20 +3,25 @@ import sys
 import datetime
 import json
 import logManager
+import sqlite3
 
 from dotenv import load_dotenv
 from pathlib import Path
-from apiManager import baixarBancoScryfall, pegarCotacaoDollar, inicializarEdicoes
+from apiManager import baixarMTGJson, pegarCotacaoDollar, inicializarEdicoes
 from metadadosManager import atualizarDataDownloadMetadados, getDataDownloadMetadados
+from gerenciadorBD import criarTabelas
 
 
 def configurarPrograma(maxDias):
-    bulkdataPath = "data/raw/bulkdata.json"
+    criarEnv()
+    bulkdataPath = "data/raw/mtgJson.json"
     edicoesPath = "data/raw/edicoes.json"
+    dbPath = os.getenv("DATABASE_URL")
+        
     criarPastas()
+    logManager.logNovaSessao()
     logManager.manutencaoLogs()
 
-    criarEnv()
     inicializarMetadados()
 
     agoraMs = int(datetime.datetime.now().timestamp() * 1000)
@@ -29,12 +34,19 @@ def configurarPrograma(maxDias):
 
     if  precisaAtualizarTudo or not bulkdataExiste:
         logManager.logMensagemAviso("Bulkdata Muito Antigo ou Inexistente. Atualizando Ele")
-        baixarBancoScryfall(bulkdataPath, bulkdataExiste)
+        baixarMTGJson(bulkdataPath, bulkdataExiste)
         atualizarDataDownloadMetadados()
         logManager.logMensagemSucesso("Bulkdata Atualizada ou Criada Com Sucesso")
     if precisaAtualizarTudo or not edicoesExiste:
         inicializarEdicoes(edicoesPath, edicoesExiste)
     pegarCotacaoDollar()
+    conexao = sqlite3.connect(dbPath)
+    #criar as tabelas
+    inicalizarBD(conexao)
+    #atualizar os dados (cartas e precos)
+    
+    conexao.commit()
+    conexao.close()
 
 def criarPastas():
     logManager.logMensagemInfo("Tentando Criar as Pastas")
@@ -57,7 +69,7 @@ def criarEnv():
 
                 arquivo.write("TITULO_SITE=COLOQUE O NOME PARA APARECER NO TOPO DO SITE\n")
                 arquivo.write("SENHA_ADMIN=COLOQUE A SENHA DESEJADA DE ADMIN\n")
-                arquivo.write("BD_CONEXAO=COLOQUE AQUI A CONEXÃO COM O SEU BANCO DE DADOS\n")
+                arquivo.write("DATABASE_URL=COLOQUE AQUI A CONEXÃO COM O SEU BANCO DE DADOS\n")
 
             logManager.logMensagemSucesso(".env não existia e foi criado")
             sys.exit("Configure o arquivo .env antes de executar o programa")
@@ -109,6 +121,57 @@ def inicializarMetadados():
     except Exception as e:
         logManager.logMensagemFatal(f"Falha ao criar metadados. O programa não pode continuar: {e}")
         sys.exit("Erro crítico na inicialização. Verifique os logs.")
+
+def inicalizarBD(conexao):
+
+    queryEdicoes = ("""CREATE TABLE IF NOT EXISTS edicoes (
+    codigo TEXT PRIMARY KEY,
+    nome TEXT,
+    id_scryfall TEXT,
+    icone_url TEXT);
+    """)
+
+    queryBulkdata = ("""CREATE TABLE IF NOT EXISTS bulkdata (
+    id_scryfall TEXT PRIMARY KEY,
+    nome_en TEXT NOT NULL,
+    nome_pt TEXT,
+    numero_colecao TEXT,
+    cores TEXT,          
+    acabamentos TEXT,    
+    imagem_url TEXT,
+    preco_usd REAL,
+    preco_usd_foil REAL,
+    preco_usd_etched REAL,
+    codigo_edicao TEXT,
+    FOREIGN KEY (codigo_edicao) REFERENCES edicoes (codigo));
+    """)
+
+    queryNomesAlternativos = ("""CREATE TABLE IF NOT EXISTS nomes_alternativos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome_variacao TEXT UNIQUE NOT NULL);
+    """)
+
+    queryRelacaoNomeCartas = ("""CREATE TABLE IF NOT EXISTS relacao_nomes_cartas (
+    id_scryfall TEXT,
+    id_nome_alternativo INTEGER,
+    PRIMARY KEY (id_scryfall, id_nome_alternativo),
+    FOREIGN KEY (id_scryfall) REFERENCES bulkdata (id_scryfall) ON DELETE CASCADE,
+    FOREIGN KEY (id_nome_alternativo) REFERENCES nomes_alternativos (id) ON DELETE CASCADE);
+    """)
+    
+    tabelas = [
+        ("Edições", queryEdicoes),
+        ("BulkData", queryBulkdata),
+        ("Nomes Alternativos", queryNomesAlternativos),
+        ("Relação Nomes-Cartas", queryRelacaoNomeCartas)
+    ]
+    for nome, query in tabelas:
+        sucesso, erro = criarTabelas(conexao, query)
+        if sucesso:
+            logManager.logMensagemSucesso(f"Tabela {nome} Criada Com Sucesso")
+        else:
+            logManager.logMensagemFatal(f"Falha Crítica Ao Criar A Tabela '{nome}': {erro}")
+            sys.exit("Erro Crítico Na Construção Do Banco De Dados. Confira O LOG")
 
 
 if __name__ == "__main__":
