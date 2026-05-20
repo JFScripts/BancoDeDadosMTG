@@ -26,21 +26,26 @@ def atualizarDataDownloadMetadados(data=None):
     metaDados = _carregarMetadados()
     if data is None:
         curData = datetime.now().isoformat()
-        metaDados["ultimoDownloadScryfall"] = curData
+        metaDados["ultimoDownloadMTGJson"] = curData
     else:
         curData = datetime.isoformat(data)
-        metaDados["ultimoDownloadScryfall"] = curData
+        metaDados["ultimoDownloadMTGJson"] = curData
 
     _escreverMetadados(metaDados)
 
 def getDataDownloadMetadados():
     metaDados = _carregarMetadados()
-    dataSalva = int(datetime.fromisoformat(metaDados["ultimoDownloadScryfall"]).timestamp())*1000
+    dataSalva = int(datetime.fromisoformat(metaDados["ultimoDownloadMTGJson"]).timestamp())*1000
     return dataSalva
 
-def atualizarTamanhoDownload(tamanho):
+def atualizarQntCartas(qnt):
     metadados = _carregarMetadados()
-    metadados["tamanhoDownloadScryfall"] = tamanho
+    metadados["qntCartasMTGJSON"] = qnt
+    _escreverMetadados(metadados)
+
+def atualizarHashDownload(hashDownload):
+    metadados = _carregarMetadados()
+    metadados["hashDownload"] = hashDownload
     _escreverMetadados(metadados)
 
 def atualizarCotacaoDollar(valor):

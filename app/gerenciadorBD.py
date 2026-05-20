@@ -11,17 +11,18 @@ def criarTabelas(conexao, querySQL):
     except Exception as e:
         return False, e
 
-def adicionarValorTabela(con, nomeTabela, dictTabela):
+def adicionarValorTabela(con, nomeTabela, dictTabela, autoCommit=True):
     try:
         con.execute("PRAGMA foreign_keys = ON")
         cur = con.cursor()
 
         colunas = ",".join(dictTabela.keys())
         valores = ", ".join(["?"] * len(dictTabela))
-        query = f"INSERT INTO {nomeTabela} ({colunas}) VALUES ({valores})"
+        query = f"INSERT OR REPLACE INTO {nomeTabela} ({colunas}) VALUES ({valores})"
 
         cur.execute(query, tuple(dictTabela.values()))
-        con.commit()
+        if autoCommit:
+            con.commit()
         return True
     except Exception as e:
         nomeFuncao = inspect.currentframe().f_code.co_name
@@ -53,7 +54,7 @@ def lerTabela(con, nomeTabela, filtro=None, ordem=None):
         print(f"Erro na Função {nomeFuncao}: {e}")
         return False
 
-def atualizarTabela(con, nomeTabela, dictNDados, idALvo):
+def atualizarTabela(con, nomeTabela, dictNDados, valorAlvo, colunaAlvo="id"):
     try:
         con.execute("PRAGMA foreign_keys = ON")
         cur = con.cursor()
@@ -62,9 +63,9 @@ def atualizarTabela(con, nomeTabela, dictNDados, idALvo):
             novosDados = novosDados + ", " + key + " = ?"
         novosDados = novosDados[2:] #Não é a melhor abordagem mas da pro gasto
         listaValores = list(dictNDados.values())
-        listaValores.append(idALvo)
+        listaValores.append(valorAlvo)
 
-        query = f"UPDATE {nomeTabela} SET {novosDados} WHERE ID = ?"
+        query = f"UPDATE {nomeTabela} SET {novosDados} WHERE {colunaAlvo} = ?"
         cur.execute(query, listaValores)
         con.commit()
         return True
@@ -73,12 +74,12 @@ def atualizarTabela(con, nomeTabela, dictNDados, idALvo):
         print(f"Erro na Função {nomeFuncao}: {e}")
         return False
 
-def deletarItemTabela(con, nomeTabela, idALvo):
+def deletarItemTabela(con, nomeTabela, valorAlvo, colunaAlvo="id"):
     try:
         con.execute("PRAGMA foreign_keys = ON")
         cur = con.cursor()
-        query = f"DELETE FROM {nomeTabela} WHERE ID = ?"
-        cur.execute(query, (idALvo, ))
+        query = f"DELETE FROM {nomeTabela} WHERE {colunaAlvo} = ?"
+        cur.execute(query, (valorAlvo, ))
         if cur.rowcount > 0:
             con.commit()
             return True

@@ -15,7 +15,7 @@ from gerenciadorBD import criarTabelas
 def configurarPrograma(maxDias):
     criarEnv()
     bulkdataPath = "data/raw/mtgJson.json"
-    edicoesPath = "data/raw/edicoes.json"
+    edicoesPath = "data/db/edicoes.json"
     dbPath = os.getenv("DATABASE_URL")
         
     criarPastas()
@@ -28,13 +28,13 @@ def configurarPrograma(maxDias):
     diferencaMs = agoraMs - getDataDownloadMetadados()
     maxMs = maxDias * 24 * 60 * 60 * 1000
 
-    bulkdataExiste = os.path.exists(bulkdataPath)
+    mtgJsonExiste = os.path.exists(bulkdataPath)
     edicoesExiste = os.path.exists(edicoesPath)
     precisaAtualizarTudo = (diferencaMs >= maxMs)
 
-    if  precisaAtualizarTudo or not bulkdataExiste:
+    if  precisaAtualizarTudo or not mtgJsonExiste:
         logManager.logMensagemAviso("Bulkdata Muito Antigo ou Inexistente. Atualizando Ele")
-        baixarMTGJson(bulkdataPath, bulkdataExiste)
+        baixarMTGJson(bulkdataPath, mtgJsonExiste)
         atualizarDataDownloadMetadados()
         logManager.logMensagemSucesso("Bulkdata Atualizada ou Criada Com Sucesso")
     if precisaAtualizarTudo or not edicoesExiste:
@@ -85,8 +85,9 @@ def criarEnv():
 
 def inicializarMetadados():
     metaDados = {
-        "ultimoDownloadScryfall" : "2000-01-01T00:00:00",
-        "tamanhoDownloadScryfall" : 0,
+        "ultimoDownloadMTGJson" : "2000-01-01T00:00:00",
+        "qntCartasMTGJSON" : 0,
+        "hashDownload": "",
         "cotacaoDollar" : 0
     }
     caminho = "configs/metadados.json"
@@ -128,22 +129,25 @@ def inicalizarBD(conexao):
     codigo TEXT PRIMARY KEY,
     nome TEXT,
     id_scryfall TEXT,
+    qnt_cartas INTEGER,
     icone_url TEXT);
     """)
 
     queryBulkdata = ("""CREATE TABLE IF NOT EXISTS bulkdata (
-    id_scryfall TEXT PRIMARY KEY,
-    nome_en TEXT NOT NULL,
-    nome_pt TEXT,
-    numero_colecao TEXT,
-    cores TEXT,          
-    acabamentos TEXT,    
-    imagem_url TEXT,
-    preco_usd REAL,
-    preco_usd_foil REAL,
-    preco_usd_etched REAL,
-    codigo_edicao TEXT,
-    FOREIGN KEY (codigo_edicao) REFERENCES edicoes (codigo));
+        uuid TEXT PRIMARY KEY,
+        id_scryfall TEXT UNIQUE NOT NULL,
+        nome_en TEXT NOT NULL,
+        nome_pt TEXT,
+        cmc REAL,
+        identidade_cor TEXT,
+        cores TEXT,
+        tipos TEXT,
+        raridade TEXT,
+        acabamentos TEXT,
+        n_colecao TEXT,
+        edicao TEXT,
+        FOREIGN KEY (edicao) REFERENCES edicoes (codigo) ON DELETE CASCADE
+    );
     """)
 
     queryNomesAlternativos = ("""CREATE TABLE IF NOT EXISTS nomes_alternativos (

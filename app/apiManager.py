@@ -5,78 +5,60 @@ import os
 import logManager
 import sys
 import time
-from metadadosManager import atualizarTamanhoDownload, atualizarCotacaoDollar, getCotacaoDollar
+from metadadosManager import atualizarCotacaoDollar, getCotacaoDollar, atualizarHashDownload
 
 def baixarMTGJson(cartasJsonNome, jaExisteJSON):
     urlMTGJson = "https://mtgjson.com/api/v5/AllPrintings.json"
     tentativas = [10, 5, 2] #Em segundos
     header = {"user-Agent": "colecaoMTG"}
     #Para cada tentativa que falhou em obter resposta tentamos novamente mas cada vez em um tempo menor
-    logManager.logMensagemInfo("Tentando Baixar A API do Scryfall")
+    logManager.logMensagemInfo("Tentando Baixar A API do MTGJson")
     try:
         tamanhoAtual = 0
-        logManager.logMensagemInfo("Tentando Baixar O Bulkdata")
+        logManager.logMensagemInfo("Tentando Baixar Card Set")
         for segundos in tentativas:
             try:
                 resposta = requests.get(urlMTGJson, headers=header, stream = True, timeout=segundos)
                 if resposta.status_code == 200:
-                    logManager.logMensagemSucesso("O Bulkdata Foi Baixado Com Sucesso")
-                    tamanhoTotal = int(resposta.headers.get("Content-Length", 0))
-                    atualizarTamanhoDownload(tamanhoTotal)
+                    logManager.logMensagemSucesso("O Card Set Foi Baixado Com Sucesso")
                     break
             except requests.exceptions.Timeout:
-                logManager.logMensagemAviso(f"O Scryfall demorou mais de {segundos} segundos para responder, tentando novamente")
+                logManager.logMensagemAviso(f"O MTGJson demorou mais de {segundos} segundos para responder, tentando novamente")
             except requests.exceptions.RequestException as e:
                 logManager.logMensagemFatal(f"Erro Crítico de Conexão: {e}")
                 sys.exit("Erro Fatal de Rede. Olhe o log para mais informação")
         else:
-            logManager.logMensagemFatal(f"Não Foi Possível Baixar O Bulkdata. O Scryfall Demorou Demais Para Responder, Verifique a Conexão com a Internet e Tente Novamente")
+            logManager.logMensagemFatal(f"Não Foi Possível Baixar O Card Set. O MTGJson Demorou Demais Para Responder, Verifique a Conexão com a Internet e Tente Novamente")
             sys.exit("Erro Fatal. Verifique Os Logs")
 
-        logManager.logMensagemInfo("Tentando Salvar No HD O Bulkdata")
+        logManager.logMensagemInfo("Tentando Salvar No HD O Card Set")
         try:
             with open(cartasJsonNome, "wb") as arquivo:
                 for parte in resposta.iter_content(chunk_size=(1024 * 1024)):
                     arquivo.write(parte)
                     tamanhoAtual += len(parte)
-                    if tamanhoTotal > 0:
-                        porcentagem = (tamanhoAtual/tamanhoTotal) * 100
-                        print(f"Baixando: {porcentagem:.2f}%", end="\r")
-                    else:
-                        print(f"Baixando... {tamanhoAtual / (1024*1024):.2f} MB", end="\r")
-                atualizarTamanhoDownload(tamanhoAtual)
+                    print(f"Baixando... {tamanhoAtual / (1024*1024):.2f} MB", end="\r")
+                #atualizarTamanhoDownload(tamanhoAtual)
                 print("Download Concluido")
-            logManager.logMensagemSucesso("Bulkdata Salvo No HD com Sucesso")
+            logManager.logMensagemSucesso("Card Set Salvo No HD com Sucesso")
+            baixarHash()
         except Exception as e:
-            logManager.logMensagemFatal(f"Erro Na Hora de Salvar O Bulkdata No HD: {e}")
-            sys.exit("Erro Fatal. Não Foi Possivel Salvar O Bulkdata. Verifique O Log")
+            logManager.logMensagemFatal(f"Erro Na Hora de Salvar O Card Set No HD: {e}")
+            sys.exit("Erro Fatal. Não Foi Possivel Salvar O Card Set. Verifique O Log")
     except Exception as e:
-        logManager.logMensagemFatal(f"Erro Na Hora de Baixar os Dados da API do Scryfall: {e}")
-        sys.exit("Erro Crítico Para Baixar Os Dados da API do Scryfall. Abra o LOG para ver")
+        logManager.logMensagemFatal(f"Erro Na Hora de Baixar os Dados da API do MTG Json: {e}")
+        sys.exit("Erro Crítico Para Baixar Os Dados da API do MTG Json. Abra o LOG para ver.")
 
-def baixarCartasPT():
-    url = "https://api.scryfall.com/cards/search?q=lang:pt"
-    path = "data/raw/cartasPT.json"
-    pedido = requests.get(url)
-    dados = pedido.json()
-    dictCartasPT = {}
-    curPagina = 0
-    while True:
-        cartasPagina = dados.get("data")
-        totalCartas = dados.get("total_cards")
-        for carta in cartasPagina:
-            dictCartasPT[carta["id"]] = carta.get("printed_name")
-        with open(path, "w", encoding="utf-8") as arquivo:
-            json.dump(dictCartasPT, arquivo,ensure_ascii=False, indent=4)
-            print(f"Pagina {curPagina} Salva")
-        if dados.get("has_more") == True and dados.get("next_page"):
-            url = dados["next_page"]
-            time.sleep(0.2)
-            pedido = requests.get(url)
-            dados = pedido.json()
-        else:
-            break
-        
+def baixarHash():
+    urlHash = "https://mtgjson.com/api/v5/AllPrintings.json.sha256"
+    logManager.logMensagemInfo("Tentando Pegar O Valor Hash")
+    try:
+        hashMtgJson = requests.get(urlHash)
+        atualizarHashDownload(hashMtgJson.text)
+        logManager.logMensagemSucesso("Hash Pego Com Sucesso")
+    except Exception as e:
+        logManager.logMensagemFatal(f"Não Foi Possível ABaixar O Valir Hash: {e}")
+        sys.exit("Erro Crítico Na Hora De Baixar O Hash. Verifique Os Logs.")
 
 
 def inicializarEdicoes(path, jaExisteJSON):
@@ -151,4 +133,4 @@ def pegarCotacaoDollar():
 
 
 if __name__ == "__main__":
-    baixarCartasPT()
+    baixarHash()
