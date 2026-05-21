@@ -3,6 +3,7 @@ import logManager
 import sys
 from datetime import datetime
 
+#Ferramentas
 
 def _carregarMetadados():
     try:
@@ -22,41 +23,60 @@ def _escreverMetadados(metaDados):
         logManager.logMensagemFatal(f"Não Foi Possível Escrever Nos Metadados: {e}")
         sys.exit("Erro Crítico Ao Escrever Nos Metadados. Confira os Logs")
 
-def atualizarDataDownloadMetadados(data=None):
+#MTG Json
+
+def atualizarDataDownloadMtgjson(data=None):
     metaDados = _carregarMetadados()
     if data is None:
         curData = datetime.now().isoformat()
-        metaDados["ultimoDownloadMTGJson"] = curData
+        metaDados["mtgjson"]["ultimoDownload"] = curData
     else:
         curData = datetime.isoformat(data)
-        metaDados["ultimoDownloadMTGJson"] = curData
-
+        metaDados["mtgjson"]["ultimoDownload"] = curData
     _escreverMetadados(metaDados)
 
-def getDataDownloadMetadados():
+def getDataDownloadMtgjson():
     metaDados = _carregarMetadados()
-    dataSalva = int(datetime.fromisoformat(metaDados["ultimoDownloadMTGJson"]).timestamp())*1000
+    dataSalva = int(datetime.fromisoformat(metaDados["mtgjson"]["ultimoDownload"]).timestamp())*1000
     return dataSalva
 
-def atualizarQntCartas(qnt):
+def atualizarQntCartasMtgjson(qnt):
     metadados = _carregarMetadados()
-    metadados["qntCartasMTGJSON"] = qnt
+    metadados["mtgjson"]["qntCartas"] = qnt
     _escreverMetadados(metadados)
 
-def atualizarHashDownload(hashDownload):
+def atualizarHashMtgjson(hashDownload):
     metadados = _carregarMetadados()
-    metadados["hashDownload"] = hashDownload
+    metadados["mtgjson"]["hash"] = hashDownload
+    _escreverMetadados(metadados)
+#scryfall
+
+def atualizarHashEdicoesScryfall(hashDownload):
+    metadados = _carregarMetadados()
+    metadados["scryfall"]["edicoes"]["hash"] = hashDownload
     _escreverMetadados(metadados)
 
-def atualizarCotacaoDollar(valor):
+# Finanças
+
+def atualizarCotacaoDollarFinancas(valor):
     metadados = _carregarMetadados()
-    metadados["cotacaoDollar"] = valor
+    metadados["financas"]["cotacaoDollar"] = valor
     _escreverMetadados(metadados)
 
-def getCotacaoDollar():
+def atualizarDataUltimaColetaFinancas(data=None):
+    metaDados = _carregarMetadados()
+    if data is None:
+        curData = datetime.now().isoformat()
+        metaDados["financas"]["dataUltimaColeta"] = curData
+    else:
+        curData = datetime.isoformat(data)
+        metaDados["financas"]["dataUltimaColeta"] = curData
+    _escreverMetadados(metaDados)
+
+def getCotacaoDollarFinancas():
     metadados = _carregarMetadados()
-    return metadados["cotacaoDollar"]
+    return metadados["financas"]["cotacaoDollar"]
     
-if __name__ == "__main__":
-    atualizarDataMetadados()
-    print(getDataMetadados())
+#if __name__ == "__main__":
+#    atualizarDataMetadados()
+#    print(getDataMetadados())

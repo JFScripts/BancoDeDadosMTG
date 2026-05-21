@@ -5,7 +5,8 @@ import os
 import logManager
 import sys
 import time
-from metadadosManager import atualizarCotacaoDollar, getCotacaoDollar, atualizarHashDownload
+import metadadosManager
+
 
 def baixarMTGJson(cartasJsonNome, jaExisteJSON):
     urlMTGJson = "https://mtgjson.com/api/v5/AllPrintings.json"
@@ -38,7 +39,6 @@ def baixarMTGJson(cartasJsonNome, jaExisteJSON):
                     arquivo.write(parte)
                     tamanhoAtual += len(parte)
                     print(f"Baixando... {tamanhoAtual / (1024*1024):.2f} MB", end="\r")
-                #atualizarTamanhoDownload(tamanhoAtual)
                 print("Download Concluido")
             logManager.logMensagemSucesso("Card Set Salvo No HD com Sucesso")
             baixarHash()
@@ -54,7 +54,7 @@ def baixarHash():
     logManager.logMensagemInfo("Tentando Pegar O Valor Hash")
     try:
         hashMtgJson = requests.get(urlHash)
-        atualizarHashDownload(hashMtgJson.text)
+        metadadosManager.atualizarHashMtgjson(hashMtgJson.text)
         logManager.logMensagemSucesso("Hash Pego Com Sucesso")
     except Exception as e:
         logManager.logMensagemFatal(f"Não Foi Possível ABaixar O Valir Hash: {e}")
@@ -71,6 +71,12 @@ def inicializarEdicoes(path, jaExisteJSON):
     try:
         for segundos in tentativas:
             try:
+                pedidoHash = requests.head(url)
+                hashEdicoes = pedidoHash.headers.get('ETag')
+                if hashEdicoes:
+                    hashEdicoes = hashEdicoes.strip('"').lstrip('W/"')
+                metadadosManager.atualizarHashEdicoesScryfall(hashEdicoes)
+
                 pedido = requests.get(url, timeout=segundos, headers=header)
                 if pedido.status_code == 200:
                     logManager.logMensagemSucesso("As Edições Foram Baixadas Com Sucesso")
@@ -110,7 +116,7 @@ def inicializarEdicoes(path, jaExisteJSON):
 def pegarCotacaoDollar():
     url = "https://economia.awesomeapi.com.br/json/last/USD-BRL"
     tentativas = [10, 5, 2]
-    valor = getCotacaoDollar()
+    valor = metadadosManager.getCotacaoDollarFinancas()
     logManager.logMensagemInfo("Tentando Baixar A Cotação Do Dollar")
     try:
         for segundos in tentativas:
@@ -120,7 +126,8 @@ def pegarCotacaoDollar():
                     dados = resposta.json()
                     valor = float(dados["USDBRL"]["bid"])
                     logManager.logMensagemSucesso("Cotação Do Dollar Obtida Com Sucesso")
-                    atualizarCotacaoDollar(valor)
+                    metadadosManager.atualizarCotacaoDollarFinancas(valor)
+                    metadadosManager.atualizarDataUltimaColetaFinancas()
                     break
             except requests.exceptions.Timeout:
                 logManager.logMensagemAviso(f"O Awesomeapi demorou mais de {segundos} segundos para responder, tentando novamente")

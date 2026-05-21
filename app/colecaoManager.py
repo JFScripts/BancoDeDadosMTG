@@ -6,6 +6,8 @@ import os
 import gerenciadorBD
 import sqlite3
 
+from hashManager import gerarHashArquivo
+
 def limparCatalogo(mtgJSONPath):
     dictCartas = {}
     cartasUnicas = 0
@@ -79,9 +81,14 @@ def limparCatalogo(mtgJSONPath):
             sys.exit("Falha Crítica Na Hora De Salvar O Catálogo No HD. Verifique Os Logs.")
 
 def popularTabelaEdicoes(edicoesPath, conexao):
-    with open(edicoesPath, "r", encoding="utf-8") as arquivo:
-        edicoes = json.load(arquivo)
     
+    logManager.logMensagemInfo("Tentando Ler Edicoes.json")
+    try:
+        with open(edicoesPath, "r", encoding="utf-8") as arquivo:
+            edicoes = json.load(arquivo)
+        logManager.logMensagemSucesso("Edicoes.json Lido Com Sucesso")
+    except Exception as e:
+        print(e)
     for sigla, dados in edicoes.items():
         dictEdicao = {
             "codigo": sigla.upper(),

@@ -4,18 +4,20 @@ import datetime
 import json
 import logManager
 import sqlite3
+import metadadosManager
+import colecaoManager
 
 from dotenv import load_dotenv
 from pathlib import Path
 from apiManager import baixarMTGJson, pegarCotacaoDollar, inicializarEdicoes
-from metadadosManager import atualizarDataDownloadMetadados, getDataDownloadMetadados
 from gerenciadorBD import criarTabelas
 
 
 def configurarPrograma(maxDias):
     criarEnv()
-    bulkdataPath = "data/raw/mtgJson.json"
+    mtgjsonPath = "data/raw/mtgJson.json"
     edicoesPath = "data/db/edicoes.json"
+    catalogoPath = "data/db/catalogo.json"
     dbPath = os.getenv("DATABASE_URL")
         
     criarPastas()
@@ -25,28 +27,42 @@ def configurarPrograma(maxDias):
     inicializarMetadados()
 
     agoraMs = int(datetime.datetime.now().timestamp() * 1000)
-    diferencaMs = agoraMs - getDataDownloadMetadados()
+    ultimoDownload = metadadosManager.getDataDownloadMtgjson()
+    diferencaMs = agoraMs - ultimoDownload
     maxMs = maxDias * 24 * 60 * 60 * 1000
 
-    mtgJsonExiste = os.path.exists(bulkdataPath)
+    mtgJsonExiste = os.path.exists(mtgjsonPath)
     edicoesExiste = os.path.exists(edicoesPath)
+    catalogoExiste = os.path.exists(catalogoPath) 
+
     precisaAtualizarTudo = (diferencaMs >= maxMs)
 
     if  precisaAtualizarTudo or not mtgJsonExiste:
         logManager.logMensagemAviso("Bulkdata Muito Antigo ou Inexistente. Atualizando Ele")
-        baixarMTGJson(bulkdataPath, mtgJsonExiste)
-        atualizarDataDownloadMetadados()
-        logManager.logMensagemSucesso("Bulkdata Atualizada ou Criada Com Sucesso")
+        baixarMTGJson(mtgjsonPath, mtgJsonExiste)
+        metadadosManager.atualizarDataDownloadMtgjson()
+        logManager.logMensagemSucesso("MtgJson Atualizado ou Criado Com Sucesso")
+
     if precisaAtualizarTudo or not edicoesExiste:
+        logManager.logMensagemAviso("Edicoes Muito Antiga ou Inexistente. Tentando Atualizar")
         inicializarEdicoes(edicoesPath, edicoesExiste)
+        logManager.logMensagemSucesso("Edicoes Atualizada ou Criada Com Sucesso")
+
     pegarCotacaoDollar()
     conexao = sqlite3.connect(dbPath)
     #criar as tabelas
-    inicalizarBD(conexao)
-    #atualizar os dados (cartas e precos)
-    
+    inicializarBD(conexao)
+
+    if precisaAtualizarTudo or not catalogoExiste:
+        logManager.logMensagemAviso("Catalogo Desatualizado. Atualizando Ele")
+        colecaoManager.limparCatalogo(mtgjsonPath)
+        colecaoManager.popularTabelaEdicoes(edicoesPath, conexao)
+        colecaoManager.popularTabelaBulkdata(mtgjsonPath, conexao)
+        logManager.logMensagemSucesso("Catalogo Atualizado E Banco De Dados Populado")    
+
     conexao.commit()
     conexao.close()
+    logManager.logMensagemSucesso("Inicialização Feita Com Sucesso")
 
 def criarPastas():
     logManager.logMensagemInfo("Tentando Criar as Pastas")
@@ -85,10 +101,27 @@ def criarEnv():
 
 def inicializarMetadados():
     metaDados = {
-        "ultimoDownloadMTGJson" : "2000-01-01T00:00:00",
-        "qntCartasMTGJSON" : 0,
-        "hashDownload": "",
-        "cotacaoDollar" : 0
+        "mtgjson":{
+            "ultimoDownload": "2000-01-01T00:00:00",
+            "qntCartas": 0,
+            "hash": ""
+        },
+        "scryfall": {
+            "edicoes":{
+                "hash": ""
+            }
+        },
+        "arquivosLocais": {
+            "hashEdicoesJson": "",
+            "hashCatalogoJson": ""
+        },
+        "financas": {
+            "cotacaoDollar": 0.0,
+            "dataUltimaColeta": "2000-01-01T00:00:00"
+        },
+        "sistema": {
+            "versao": 0.2
+        }
     }
     caminho = "configs/metadados.json"
     logManager.logMensagemInfo("Tentando criar os MetaDados")
@@ -103,11 +136,9 @@ def inicializarMetadados():
                 with open(caminho, "r", encoding="utf-8") as arquivo:
                     metadadosCarregados = json.load(arquivo)
                 logManager.logMensagemSucesso("Arquivos de Metadados Carregado com Sucesso")
-                diferenca = metaDados.keys() - metadadosCarregados.keys()
-                if not diferenca:
+                metadadosCarregados, foiAtualizado = atualizarMetadados(metaDados, metadadosCarregados)
+                if not foiAtualizado:
                     return
-                for chave in diferenca:
-                    metadadosCarregados[chave] = metaDados[chave]
                 logManager.logMensagemInfo("Os Metadados Estão Desatualizando, tentando atualiza-los")
                 try:
                     with open(caminho, "w", encoding="utf-8") as arquivo:
@@ -123,7 +154,19 @@ def inicializarMetadados():
         logManager.logMensagemFatal(f"Falha ao criar metadados. O programa não pode continuar: {e}")
         sys.exit("Erro crítico na inicialização. Verifique os logs.")
 
-def inicalizarBD(conexao):
+def atualizarMetadados(padrao, carregado):
+    mudou = False
+    for chave, valor in padrao.items():
+        if chave not in carregado:
+            carregado[chave] = valor
+            mudou = True
+        elif isinstance(valor, dict) and isinstance(carregado[chave], dict):
+            novoDict, novoMudou = atualizarMetadados(valor, carregado[chave])
+            if novoMudou:
+                mudou = True
+    return carregado, mudou
+
+def inicializarBD(conexao):
 
     queryEdicoes = ("""CREATE TABLE IF NOT EXISTS edicoes (
     codigo TEXT PRIMARY KEY,
