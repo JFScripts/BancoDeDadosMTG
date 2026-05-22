@@ -199,18 +199,29 @@ def inicializarBD(conexao):
     """)
 
     queryRelacaoNomeCartas = ("""CREATE TABLE IF NOT EXISTS relacao_nomes_cartas (
-    id_scryfall TEXT,
+    uuid TEXT,
     id_nome_alternativo INTEGER,
-    PRIMARY KEY (id_scryfall, id_nome_alternativo),
-    FOREIGN KEY (id_scryfall) REFERENCES bulkdata (id_scryfall) ON DELETE CASCADE,
+    PRIMARY KEY (uuid, id_nome_alternativo),
+    FOREIGN KEY (uuid) REFERENCES bulkdata (uuid) ON DELETE CASCADE,
     FOREIGN KEY (id_nome_alternativo) REFERENCES nomes_alternativos (id) ON DELETE CASCADE);
+    """)
+
+    queryColecaoUsuario = ("""CREATE TABLE IF NOT EXISTS colecao_usuario(
+        uuid TEXT NOT NULL,
+        acabamento TEXT NOT NULL,
+        quantidade INTEGER NOT NULL CHECK (quantidade > 0),
+        PRIMARY KEY (uuid, acabamento),
+        FOREIGN KEY (uuid) REFERENCES bulkdata (uuid) ON DELETE CASCADE
+    )
+    
     """)
     
     tabelas = [
         ("Edições", queryEdicoes),
         ("BulkData", queryBulkdata),
         ("Nomes Alternativos", queryNomesAlternativos),
-        ("Relação Nomes-Cartas", queryRelacaoNomeCartas)
+        ("Relação Nomes-Cartas", queryRelacaoNomeCartas),
+        ("Coleção Usuário", queryColecaoUsuario)
     ]
     for nome, query in tabelas:
         sucesso, erro = criarTabelas(conexao, query)

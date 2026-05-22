@@ -106,6 +106,7 @@ def popularTabelaBulkdata(mtgJsonPath, conexao):
     with open(mtgJsonPath, "r", encoding="utf-8") as arquivo:
         cartas = json.load(arquivo)
     for nomeEn, dadosCarta in cartas.items():
+        print(f"Tentando Adicionar {nomeEn}")
         edicoesCarta = dadosCarta.get("edicoes", {})
         for sigla, dadosEdicao in edicoesCarta.items():
             dictCarta = {
@@ -125,14 +126,16 @@ def popularTabelaBulkdata(mtgJsonPath, conexao):
 
             if gerenciadorBD.adicionarValorTabela(conexao, "bulkdata", dictCarta, autoCommit=False):
                 contagemCartas += 1
-            if contagemCartas % 1000 == 0:
-                conexao.commit()
-                print(f"{contagemCartas} cartas adicionadas")
+            #if contagemCartas % 1000 == 0:
+            #    conexao.commit()
+            #    print(f"{contagemCartas} cartas adicionadas")
     conexao.commit()
 
 if __name__ == "__main__":
     conexao = sqlite3.connect("data/db/bdMTG.db")
+    print("Populando A Tabela De Edicoes")
     popularTabelaEdicoes("data/db/edicoes.json", conexao)
+    print("Populando A Tabela De Bulkdata")
     popularTabelaBulkdata("data/db/catalogo.json", conexao)
     conexao.row_factory = sqlite3.Row
     cursor = conexao.cursor()

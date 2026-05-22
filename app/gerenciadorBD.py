@@ -37,10 +37,14 @@ def lerTabela(con, nomeTabela, filtro=None, ordem=None):
         query = f"SELECT * FROM {nomeTabela}"
         valores = ()
         if filtro:
-            listaCondicoes = [f"{i} = ?" for i in filtro.keys()]
-            condicao = " AND ".join(listaCondicoes)
-            query = query + " WHERE " + condicao
-            valores = tuple(filtro.values())
+            if isinstance(filtro, tuple):
+                query += f" WHERE {filtro[0]}"
+                valores = filtro[1]
+            elif isinstance(filtro, dict):
+                listaCondicoes = [f"{i} = ?" for i in filtro.keys()]
+                condicao = " AND ".join(listaCondicoes)
+                query = query + " WHERE " + condicao
+                valores = tuple(filtro.values())
 
         if ordem:
             query = query + f" ORDER BY {ordem}"
@@ -54,21 +58,43 @@ def lerTabela(con, nomeTabela, filtro=None, ordem=None):
         print(f"Erro na Função {nomeFuncao}: {e}")
         return False
 
-def atualizarTabela(con, nomeTabela, dictNDados, valorAlvo, colunaAlvo="id"):
+def atualizarTabela(con, nomeTabela, dictFiltro, dictNDados=None, dictIncrementos=None):
+    if not dictNDados and not dictIncrementos:
+        print("Erro: Nenhum dado para atualizar foi passado.")
+        return False
+        
+    if not dictFiltro:
+        print("Erro: Nenhum filtro passado. Atualizar o banco sem WHERE é perigoso.")
+        return False
+
     try:
         con.execute("PRAGMA foreign_keys = ON")
         cur = con.cursor()
-        novosDados = ""
-        for key in dictNDados:
-            novosDados = novosDados + ", " + key + " = ?"
-        novosDados = novosDados[2:] #Não é a melhor abordagem mas da pro gasto
-        listaValores = list(dictNDados.values())
-        listaValores.append(valorAlvo)
+        
+        listaCondicoesSet = []
+        listaValores = []
+        if dictNDados:
+            for key, value in dictNDados.items():
+                listaCondicoesSet.append(f"{key} = ?")
+                listaValores.append(value)
+        if dictIncrementos:
+            for key, value in dictIncrementos.items():
+                listaCondicoesSet.append(f"{key} = {key} + ?")
+                listaValores.append(value)
 
-        query = f"UPDATE {nomeTabela} SET {novosDados} WHERE {colunaAlvo} = ?"
+        strSet = ", ".join(listaCondicoesSet)
+        
+        listaCondicoesWhere = [f"{key} = ?" for key in dictFiltro.keys()]
+        strWhere = " AND ".join(listaCondicoesWhere)
+        
+        listaValores.extend(dictFiltro.values())
+
+        query = f"UPDATE {nomeTabela} SET {strSet} WHERE {strWhere}"
+        
         cur.execute(query, listaValores)
         con.commit()
         return True
+        
     except Exception as e:
         nomeFuncao = inspect.currentframe().f_code.co_name
         print(f"Erro na Função {nomeFuncao}: {e}")
