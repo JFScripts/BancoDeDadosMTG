@@ -1,5 +1,5 @@
 import hashlib
-import logManager
+from app import logManager
 
 def gerarHashArquivo(path):
     hasher = hashlib.sha256()

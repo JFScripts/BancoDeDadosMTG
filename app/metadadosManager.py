@@ -1,5 +1,5 @@
 import json
-import logManager
+from app import logManager
 import sys
 from datetime import datetime
 

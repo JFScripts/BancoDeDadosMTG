@@ -29,12 +29,12 @@ def adicionarValorTabela(con, nomeTabela, dictTabela, autoCommit=True):
         print(f"Erro na Função {nomeFuncao}: {e}")
         return False
 
-def lerTabela(con, nomeTabela, filtro=None, ordem=None):
+def lerTabela(con, nomeTabela, colunas="*", filtro=None, ordem=None):
     try:
         con.execute("PRAGMA foreign_keys = ON")
         con.row_factory = sqlite3.Row
         cur = con.cursor()
-        query = f"SELECT * FROM {nomeTabela}"
+        query = f"SELECT {colunas} FROM {nomeTabela}"
         valores = ()
         if filtro:
             if isinstance(filtro, tuple):

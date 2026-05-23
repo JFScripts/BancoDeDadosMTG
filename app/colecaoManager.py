@@ -1,9 +1,9 @@
 import ijson
 import json
-import logManager
+from app import logManager
 import sys
 import os
-import gerenciadorBD
+from app import gerenciadorBD
 import sqlite3
 
 from hashManager import gerarHashArquivo

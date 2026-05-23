@@ -1,4 +1,4 @@
-import gerenciadorBD
+from app import gerenciadorBD
 import sqlite3
 
 # buscamos o nome no BD procurando o nome em PT e em ENG
@@ -43,6 +43,18 @@ def adicionarCarta(conexao, pacote):
         return True
     else:
         return False
+
+def buscarNomesCartas(conexao):
+    nomeCartas = gerenciadorBD.lerTabela(conexao, "bulkdata", colunas="nome_en, nome_pt")
+    if not nomeCartas:
+        return []
+    nomesUnicos = set()
+    for nome in nomeCartas:
+        if nome["nome_en"]:
+            nomesUnicos.add(nome["nome_en"])
+        if nome["nome_pt"]:
+            nomesUnicos.add(nome["nome_pt"])
+    return list(nomesUnicos)
 
 if __name__ == "__main__":
     pacote = {

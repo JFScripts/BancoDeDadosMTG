@@ -2,9 +2,9 @@ import os
 import sys
 import datetime
 import json
-import logManager
+from app import logManager
 import sqlite3
-import metadadosManager
+from app import metadadosManager
 import colecaoManager
 
 from dotenv import load_dotenv

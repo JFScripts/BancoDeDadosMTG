@@ -2,11 +2,10 @@ import requests
 import json
 import datetime
 import os
-import logManager
+from app import logManager
 import sys
 import time
-import metadadosManager
-
+from app import metadadosManager
 
 def baixarMTGJson(cartasJsonNome, jaExisteJSON):
     urlMTGJson = "https://mtgjson.com/api/v5/AllPrintings.json"
@@ -59,7 +58,6 @@ def baixarHash():
     except Exception as e:
         logManager.logMensagemFatal(f"Não Foi Possível ABaixar O Valir Hash: {e}")
         sys.exit("Erro Crítico Na Hora De Baixar O Hash. Verifique Os Logs.")
-
 
 def inicializarEdicoes(path, jaExisteJSON):
 
@@ -137,7 +135,6 @@ def pegarCotacaoDollar():
             logManager.logMensagemAviso(f"Não Foi Possível Estabelecer O Valor Do Dollar. Será Usado o Valor de {valor}")
     except Exception as e:
         logManager.logMensagemErro(f"Não Foi Possível Atualizar O Valor Do Dollar, Será Usado O Valor Salvo: {e}")
-
 
 if __name__ == "__main__":
     baixarHash()
