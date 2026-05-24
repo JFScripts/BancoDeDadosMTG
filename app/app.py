@@ -27,12 +27,26 @@ def paginaInicial(request: Request):
         name="paginaInicial.html"
     )
 
-@app.post("/botaoClicado")
+@app.post("/botaoSalvado")
 def botaoClicado(dadosRecebido: AdicionarCarta):
-    print(dadosRecebido)
-    return {"status": "sucesso"}
+    dictPacote = {
+        "nome": dadosRecebido.nome,
+        "edicao": dadosRecebido.edicao,
+        "acabamento": dadosRecebido.acabamento,
+        "quantidade": dadosRecebido.quantidade
+    }
+    sucesso = menu.adicionarCarta(conexao, dictPacote)
+    print(sucesso)
+    if sucesso:
+        return {"status": "sucesso"}
+    return {"status": "Falha"}
 
 @app.get("/buscarCartas")
 def buscarCarta():
     listaCartas = menu.buscarNomesCartas(conexao)
     return listaCartas
+
+@app.get("/buscarEdicoes")
+def buscarEdicoes(nome: str):
+    listaEdicoes = menu.buscarEdicoes(conexao, nome)
+    return listaEdicoes

@@ -48,7 +48,6 @@ def lerTabela(con, nomeTabela, colunas="*", filtro=None, ordem=None):
 
         if ordem:
             query = query + f" ORDER BY {ordem}"
-        print(query)
         cur.execute(query, valores)
         resultadoBruto = cur.fetchall()
         listaFinal = [dict(linha) for linha in resultadoBruto]
@@ -111,6 +110,23 @@ def deletarItemTabela(con, nomeTabela, valorAlvo, colunaAlvo="id"):
             return True
         else:
             return False
+    except Exception as e:
+        nomeFuncao = inspect.currentframe().f_code.co_name
+        print(f"Erro na Função {nomeFuncao}: {e}")
+        return False
+
+def lerQueryPersonalizada(con, querySQL, valores=()):
+    try:
+        con.execute("PRAGMA foreign_keys = ON")
+        con.row_factory = sqlite3.Row
+        cur = con.cursor()
+        
+        cur.execute(querySQL, valores)
+        resultadoBruto = cur.fetchall()
+        
+        listaFinal = [dict(linha) for linha in resultadoBruto]
+        return listaFinal
+        
     except Exception as e:
         nomeFuncao = inspect.currentframe().f_code.co_name
         print(f"Erro na Função {nomeFuncao}: {e}")

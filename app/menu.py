@@ -56,6 +56,19 @@ def buscarNomesCartas(conexao):
             nomesUnicos.add(nome["nome_pt"])
     return list(nomesUnicos)
 
+def buscarEdicoes(conexao, nome):
+    query = """
+    SELECT 
+        edicoes.codigo,
+        edicoes.nome, 
+        edicoes.icone_url AS linkImagem,
+        bulkdata.acabamentos 
+    FROM bulkdata
+    JOIN edicoes ON bulkdata.edicao = edicoes.codigo
+    WHERE bulkdata.nome_en COLLATE NOCASE = ? OR bulkdata.nome_pt COLLATE NOCASE = ?
+    """
+    return gerenciadorBD.lerQueryPersonalizada(conexao, query, (nome, nome))
+    
 if __name__ == "__main__":
     pacote = {
         "nome": "monólito de basalto",

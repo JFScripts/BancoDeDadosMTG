@@ -18,12 +18,16 @@
         <h1>Adicionar Carta</h1>
         <form class="adicionarCarta">
             <input type="text" autocomplete="off" id="nomeCarta"list="sugestoesCartas" placeholder="Digite O Nome Da Carta">
+
             <datalist id="sugestoesCartas"></datalist>
-            <input type="text" autocomplete="off" id="edicaoCarta" placeholder="Digite A Edicao Da Carta">
-            <input type="text" autocomplete="off" id="acabamentoCarta" placeholder="Digite O Acabamento Da Carta">
-            <input type="text" autocomplete="off" id="qntCarta" placeholder="Digite A Quantidade De Carta">
+            
+            <div id="containerAcabamentos" style="display: flex; gap: 15px;"></div>
+            
+            <input type="text" autocomplete="off" id="qntCarta" disabled placeholder="Digite A Quantidade De Carta">
+            
+            <div id="dropdownEdicoes" class="listaEdicoes"></div>
         </form>
-        <button id="btn-helloWorld" type="button">Adicionar Carta</button>
+        <button id="btnSalvar" type="button">Adicionar Carta</button>
     </div>
 
     <script src="/static/JavaScript/paginaInicial.js"></script>
